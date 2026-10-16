@@ -10,10 +10,12 @@ import {
 } from '@nestjs/common';
 import { RunbookService } from '../services/runbook.service';
 import { CreateRunbookMappingDto, UpdateRunbookMappingDto } from '../dto/runbook-mapping.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
 
+// JwtAuthGuard must run first so AdminGuard sees the verified req.user.
 @Controller('admin/runbook-mappings')
-@UseGuards(AdminGuard)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class RunbookMappingController {
   constructor(private readonly runbookService: RunbookService) {}
 

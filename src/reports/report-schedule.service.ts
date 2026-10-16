@@ -20,9 +20,10 @@ export class ReportScheduleService {
 
   // ── Admin CRUD ─────────────────────────────────────────────────────────────
 
-  async create(dto: CreateReportScheduleDto): Promise<ReportSchedule> {
+  async create(dto: CreateReportScheduleDto, tenantId: string): Promise<ReportSchedule> {
     const schedule = this.scheduleRepo.create({
       ...dto,
+      tenantId,
       format: dto.format ?? ReportFormat.PDF,
       dayOfWeek: dto.dayOfWeek ?? null,
       dayOfMonth: dto.dayOfMonth ?? null,
@@ -32,24 +33,24 @@ export class ReportScheduleService {
     return this.scheduleRepo.save(schedule);
   }
 
-  async findAll(): Promise<ReportSchedule[]> {
-    return this.scheduleRepo.find({ order: { createdAt: 'DESC' } });
+  async findAll(tenantId: string): Promise<ReportSchedule[]> {
+    return this.scheduleRepo.find({ where: { tenantId }, order: { createdAt: 'DESC' } });
   }
 
-  async findOne(id: string): Promise<ReportSchedule> {
-    const schedule = await this.scheduleRepo.findOne({ where: { id } });
+  async findOne(id: string, tenantId: string): Promise<ReportSchedule> {
+    const schedule = await this.scheduleRepo.findOne({ where: { id, tenantId } });
     if (!schedule) throw new NotFoundException(`ReportSchedule ${id} not found`);
     return schedule;
   }
 
-  async update(id: string, dto: UpdateReportScheduleDto): Promise<ReportSchedule> {
-    const schedule = await this.findOne(id);
+  async update(id: string, dto: UpdateReportScheduleDto, tenantId: string): Promise<ReportSchedule> {
+    const schedule = await this.findOne(id, tenantId);
     Object.assign(schedule, dto);
     return this.scheduleRepo.save(schedule);
   }
 
-  async remove(id: string): Promise<void> {
-    const schedule = await this.findOne(id);
+  async remove(id: string, tenantId: string): Promise<void> {
+    const schedule = await this.findOne(id, tenantId);
     await this.scheduleRepo.remove(schedule);
   }
 

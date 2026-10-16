@@ -7,11 +7,13 @@ import { RunbookService } from './services/runbook.service';
 import { RunbookController } from './controllers/runbook.controller';
 import { RunbookMappingController } from './controllers/runbook-mapping.controller';
 import { AuditModule } from '../common/audit/audit.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Runbook, RunbookExecution, RunbookMapping]),
     AuditModule,
+    AuthModule,
   ],
   controllers: [RunbookController, RunbookMappingController],
   providers: [RunbookService],

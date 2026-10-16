@@ -16,9 +16,14 @@ export enum ReportFrequency {
 
 @Entity('report_schedules')
 @Index(['isActive'])
+@Index(['tenantId'])
 export class ReportSchedule {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  /** Owning tenant; all admin CRUD is scoped to the caller's tenant. */
+  @Column({ type: 'varchar', nullable: true })
+  tenantId?: string | null;
 
   @Column()
   reportType: string;
