@@ -7,11 +7,18 @@ import {
   Body,
   Param,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { MedicalCodeService } from '../services/medical-code.service';
+import { AuditService } from '../../common/audit/audit.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
 import {
   CreateMedicalCodeDto,
   UpdateMedicalCodeDto,
@@ -20,22 +27,37 @@ import {
 import { CodeType } from '../../common/enums';
 
 @ApiTags('medical-codes')
+@ApiBearerAuth('medical-auth')
 @Controller('medical-codes')
+@UseGuards(JwtAuthGuard)
 export class MedicalCodeController {
-  constructor(private readonly medicalCodeService: MedicalCodeService) {}
+  constructor(
+    private readonly medicalCodeService: MedicalCodeService,
+    private readonly auditService: AuditService,
+  ) { }
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)
   @ApiOperation({ summary: 'Create a new medical code' })
   @ApiResponse({ status: 201, description: 'Medical code created successfully' })
-  async create(@Body() createDto: CreateMedicalCodeDto) {
-    return this.medicalCodeService.create(createDto);
+  async create(@Body() createDto: CreateMedicalCodeDto, @Req() request: any) {
+    const medicalCode = await this.medicalCodeService.create(createDto);
+    await this.logChange(request, 'MEDICAL_CODE_CREATED', medicalCode.id);
+    return medicalCode;
   }
 
   @Post('bulk')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)
   @ApiOperation({ summary: 'Bulk create medical codes' })
   @ApiResponse({ status: 201, description: 'Medical codes created successfully' })
-  async bulkCreate(@Body() codes: CreateMedicalCodeDto[]) {
-    return this.medicalCodeService.bulkCreate(codes);
+  async bulkCreate(@Body() codes: CreateMedicalCodeDto[], @Req() request: any) {
+    const medicalCodes = await this.medicalCodeService.bulkCreate(codes);
+    for (const medicalCode of medicalCodes) {
+      await this.logChange(request, 'MEDICAL_CODE_BULK_CREATED', medicalCode.id);
+    }
+    return medicalCodes;
   }
 
   @Get()
@@ -75,30 +97,41 @@ export class MedicalCodeController {
   }
 
   @Put(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)
   @ApiOperation({ summary: 'Update medical code' })
   @ApiParam({ name: 'id', description: 'Medical code ID' })
   @ApiResponse({ status: 200, description: 'Medical code updated successfully' })
   @ApiResponse({ status: 404, description: 'Medical code not found' })
-  async update(@Param('id') id: string, @Body() updateDto: UpdateMedicalCodeDto) {
-    return this.medicalCodeService.update(id, updateDto);
+  async update(@Param('id') id: string, @Body() updateDto: UpdateMedicalCodeDto, @Req() request: any) {
+    const medicalCode = await this.medicalCodeService.update(id, updateDto);
+    await this.logChange(request, 'MEDICAL_CODE_UPDATED', medicalCode.id);
+    return medicalCode;
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete medical code' })
   @ApiParam({ name: 'id', description: 'Medical code ID' })
   @ApiResponse({ status: 204, description: 'Medical code deleted successfully' })
   @ApiResponse({ status: 404, description: 'Medical code not found' })
-  async delete(@Param('id') id: string) {
-    return this.medicalCodeService.delete(id);
+  async delete(@Param('id') id: string, @Req() request: any) {
+    await this.medicalCodeService.delete(id);
+    await this.logChange(request, 'MEDICAL_CODE_DELETED', id);
   }
 
   @Put(':id/deactivate')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)
   @ApiOperation({ summary: 'Deactivate medical code' })
   @ApiParam({ name: 'id', description: 'Medical code ID' })
   @ApiResponse({ status: 200, description: 'Medical code deactivated successfully' })
-  async deactivate(@Param('id') id: string) {
-    return this.medicalCodeService.deactivate(id);
+  async deactivate(@Param('id') id: string, @Req() request: any) {
+    const medicalCode = await this.medicalCodeService.deactivate(id);
+    await this.logChange(request, 'MEDICAL_CODE_DEACTIVATED', medicalCode.id);
+    return medicalCode;
   }
 
   @Post('validate')
@@ -106,5 +139,16 @@ export class MedicalCodeController {
   @ApiResponse({ status: 200, description: 'Validation result returned' })
   async validateCodes(@Body() codes: Array<{ code: string; codeType: CodeType }>) {
     return this.medicalCodeService.validateCodes(codes);
+  }
+
+  private async logChange(request: any, action: string, resourceId: string): Promise<void> {
+    await this.auditService.log({
+      actorId: request.user.userId,
+      action,
+      resourceId,
+      resourceType: 'MEDICAL_CODE',
+      ipAddress: request.ip,
+      userAgent: request.headers['user-agent'],
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditModule } from '../common/audit/audit.module';
 
 import {
   MedicalCode,
@@ -48,6 +49,7 @@ import {
 
 @Module({
   imports: [
+    AuditModule,
     TypeOrmModule.forFeature([
       MedicalCode,
       Insurance,
@@ -105,4 +107,4 @@ import {
     SubscriptionService,
   ],
 })
-export class BillingModule {}
+export class BillingModule { }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
+import { AuthModule } from '../auth/auth.module';
 
 import { ProjectionCheckpoint } from './checkpoint/projection-checkpoint.entity';
 import { CheckpointService } from './checkpoint/checkpoint.service';
@@ -24,6 +25,7 @@ import { AnalyticsSnapshot } from './entities/analytics-snapshot.entity';
 
 @Module({
   imports: [
+    AuthModule,
     CqrsModule,
     TypeOrmModule.forFeature([
       ProjectionCheckpoint,
@@ -47,4 +49,4 @@ import { AnalyticsSnapshot } from './entities/analytics-snapshot.entity';
   ],
   exports: [CheckpointService, ProjectionRebuildService],
 })
-export class ProjectionsModule {}
+export class ProjectionsModule { }

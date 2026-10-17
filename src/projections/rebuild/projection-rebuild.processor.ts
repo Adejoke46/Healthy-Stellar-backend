@@ -14,6 +14,7 @@ import { IEvent } from '@nestjs/cqrs';
 
 interface RebuildJobData {
   projectorName: string;
+  lockToken?: string;
 }
 
 @Processor('projection-rebuild')
@@ -26,11 +27,11 @@ export class ProjectionRebuildProcessor {
     private readonly eventBus: EventBus,
     @InjectQueue('projection-dlq') private readonly dlq: Queue,
     private readonly eventStore: EventStoreService,
-  ) {}
+  ) { }
 
   @Process('rebuild')
   async handleRebuild(job: Job<RebuildJobData>): Promise<void> {
-    const { projectorName } = job.data;
+    const { projectorName, lockToken } = job.data;
     this.logger.log(`Starting rebuild for ${projectorName}`);
 
     try {
@@ -54,7 +55,7 @@ export class ProjectionRebuildProcessor {
       for await (const { event } of this.eventStore.streamAll(0)) {
         await this.eventBus.publish(event as unknown as IEvent);
         processed++;
-        
+
         if (processed % 100 === 0 || processed === total) {
           await this.rebuildService.updateStatus(projectorName, {
             processedEvents: processed,
@@ -79,6 +80,8 @@ export class ProjectionRebuildProcessor {
         completedAt: new Date().toISOString(),
       });
       throw err;
+    } finally {
+      await this.rebuildService.releaseRebuildLock(projectorName, lockToken);
     }
   }
 
