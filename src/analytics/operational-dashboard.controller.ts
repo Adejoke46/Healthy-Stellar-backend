@@ -1,5 +1,6 @@
 import { Controller, Get, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { TenantGuard } from '../tenant/guards/tenant.guard';
@@ -9,7 +10,7 @@ import { OperationalDashboardService } from './services/operational-dashboard.se
 import { OperationalDashboardDto, UtilizationTrendDto } from './dto/operational-dashboard.dto';
 
 @ApiTags('Analytics')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('analytics/operational')
 @UseGuards(JwtAuthGuard, AdminGuard, TenantGuard)
 @UseInterceptors(TenantInterceptor)

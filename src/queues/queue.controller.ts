@@ -18,6 +18,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { QueueService } from './queue.service';
 import { JobStatusResponse, JobNotFoundResponse } from './dto/job-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -36,7 +37,7 @@ export class QueueController {
   @Get(':jobId')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Get job status by job ID',
     description:
@@ -80,7 +81,7 @@ export class QueueController {
    */
   @Sse(':jobId/stream')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Stream job status updates (SSE)',
     description:
@@ -102,7 +103,7 @@ export class QueueController {
   @Get('correlation/:correlationId')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Get job status by correlation ID',
     description:

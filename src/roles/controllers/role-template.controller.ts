@@ -17,6 +17,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { RoleTemplateService, InstantiateRoleDto } from '../services/role-template.service';
 import { RoleTemplateCategory } from '../entities/role-template.entity';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -25,7 +26,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('Role Templates')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('role-templates')
 export class RoleTemplateController {

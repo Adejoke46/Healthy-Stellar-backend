@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Res, UseGuards, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../constants/swagger.constants';
 import { AuditService } from './audit.service';
 import { AuditLogEntity } from './audit-log.entity';
 
@@ -10,7 +11,7 @@ import { AuditLogEntity } from './audit-log.entity';
  * module level; placeholder structure is shown here).
  */
 @ApiTags('Audit')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('audit')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}

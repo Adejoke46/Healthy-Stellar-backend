@@ -10,6 +10,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { ProviderDirectoryQueryDto } from '../dto/provider-directory-query.dto';
@@ -82,7 +83,7 @@ export class ProvidersController {
   @Patch(':address/availability')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Throttle({ ip: { limit: 10, ttl: 60000 }, user: { limit: 10, ttl: 60000 } })
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Update provider availability and capacity',
     description: 'Allows providers to update their availability status and patient capacity',

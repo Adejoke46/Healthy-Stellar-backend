@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { MedicalCodeService } from '../services/medical-code.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -27,7 +28,7 @@ import {
 import { CodeType } from '../../common/enums';
 
 @ApiTags('medical-codes')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('medical-codes')
 @UseGuards(JwtAuthGuard)
 export class MedicalCodeController {

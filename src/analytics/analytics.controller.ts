@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { AnalyticsService } from './analytics.service';
 import { OverviewResponseDto } from './dto/overview-response.dto';
 import { ActivityQueryDto, ActivityResponseDto } from './dto';
@@ -23,7 +24,7 @@ import { TenantGuard } from '../tenant/guards/tenant.guard';
 import { TenantInterceptor } from '../tenant/interceptors/tenant.interceptor';
 
 @ApiTags('Analytics')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('admin/analytics')
 @UseGuards(JwtAuthGuard, AdminGuard, TenantGuard)
 @UseInterceptors(TenantInterceptor)

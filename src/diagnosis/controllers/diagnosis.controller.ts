@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { DiagnosisService } from '../services/diagnosis.service';
 import { Icd11Service, Icd11SearchResultDto } from '../services/icd11.service';
@@ -23,7 +24,7 @@ import {
 } from '../dto/diagnosis.dto';
 
 @ApiTags('Diagnosis')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('diagnosis')
 export class DiagnosisController {

@@ -9,13 +9,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RecordTemplateService } from '../services/record-template.service';
 import { CreateTemplateDto } from '../dto/create-template.dto';
 import { CreateRecordFromTemplateDto } from '../dto/create-record-from-template.dto';
 
 @ApiTags('Templates')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class RecordTemplateController {

@@ -21,6 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { RunbookService } from '../services/runbook.service';
 import {
@@ -59,7 +60,7 @@ function getActorId(req: Request): string {
  * are protected by default.
  */
 @ApiTags('Operator Runbooks')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('operator/runbooks')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)

@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { BreakGlassService } from '../services/break-glass.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -36,7 +37,7 @@ class ReviewBreakGlassDto {
 }
 
 @ApiTags('Break-Glass Access')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('access/break-glass')
 export class BreakGlassController {

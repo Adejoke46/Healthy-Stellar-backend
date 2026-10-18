@@ -15,6 +15,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Response } from 'express';
 import { GdprService } from '../services/gdpr.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -32,7 +33,7 @@ import * as fs from 'fs';
 @ApiTags('GDPR Data Subject Rights')
 @Controller('gdpr')
 @UseGuards(JwtAuthGuard, ThrottlerBehindProxyGuard)
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class GdprController {
   constructor(
     private readonly gdprService: GdprService,

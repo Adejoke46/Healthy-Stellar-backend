@@ -11,6 +11,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { AuthService, AuthResponse } from '../services/auth.service';
 import { MfaService } from '../services/mfa.service';
@@ -150,7 +151,7 @@ export class AuthController {
    */
   @Delete('sessions')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Revoke all sessions (logout everywhere)' })
   @ApiResponse({ status: 200, description: 'All sessions revoked' })
   async revokeAllSessionsDelete(@Req() req: Request): Promise<{ message: string }> {
@@ -260,7 +261,7 @@ export class AuthController {
    */
   @Delete('sessions/:id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Terminate a specific session' })
   @ApiResponse({ status: 200, description: 'Session terminated' })
   @ApiResponse({ status: 404, description: 'Session not found' })

@@ -1,12 +1,13 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
 import { AuditLogService, PaginatedAuditLogs } from '../services/audit-log.service';
 import { QueryAuditLogsDto } from './dto/query-audit-logs.dto';
 
 @ApiTags('Admin – PHI Audit Logs')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/audit-logs')
 export class AuditLogsController {

@@ -1,5 +1,6 @@
 import { Body, Controller, Post, UseGuards, ForbiddenException } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags, ApiResponse, ApiSecurity } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { Hl7v2LabImportService } from './services/hl7v2-lab-import.service';
 import { ImportHl7v2Dto } from './dto/import-hl7v2.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -31,7 +32,7 @@ export class Hl7v2ImportController {
   @Post('hl7v2')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.PHYSICIAN, UserRole.NURSE)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Import lab results from a raw HL7 v2 ORU^R01 message',
     description:

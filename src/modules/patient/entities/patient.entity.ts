@@ -316,6 +316,7 @@ import {
   Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../../common/constants/swagger.constants';
 import { Gender, BloodType, MaritalStatus } from '../entities/patient.entity';
 
 export class CreatePatientDto {
@@ -1085,7 +1086,7 @@ import { SearchPatientDto } from './dto/search-patient.dto';
 import { MergePatientsDto } from './dto/merge-patients.dto';
 
 @ApiTags('Patients')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('patients')
 @UseInterceptors(ClassSerializerInterceptor)
 export class PatientController {

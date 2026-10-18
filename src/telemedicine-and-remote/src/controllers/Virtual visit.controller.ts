@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { VirtualVisitService } from '../services/virtual-visit.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/guards/roles.guard';
 import { Roles } from '../../../auth/decorators/roles.decorator';
@@ -24,7 +25,7 @@ const ADMIN_ROLES = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
 const PROVIDER_ROLES = [UserRole.PHYSICIAN, UserRole.NURSE, UserRole.SURGEON];
 
 @ApiTags('telemedicine/virtual-visits')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Roles(...ADMIN_ROLES, ...PROVIDER_ROLES, UserRole.PATIENT)
 @Controller('telemedicine/virtual-visits')

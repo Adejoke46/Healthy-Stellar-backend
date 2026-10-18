@@ -13,6 +13,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { Icd10ValidationService } from './services/icd10-validation.service';
 import { CptValidationService } from './services/cpt-validation.service';
 import { LoincValidationService } from './services/loinc-validation.service';
@@ -32,7 +33,7 @@ import {
 } from './dto/medical-validation.dto';
 
 @ApiTags('Medical Data Validation')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('medical-validation')
 export class MedicalValidationController {
   constructor(

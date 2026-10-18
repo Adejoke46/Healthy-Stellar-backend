@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request, Response } from 'express';
@@ -24,7 +25,7 @@ export class ReportsController {
 
   @Post('generate')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Queue a report generation job (pdf, csv, or xlsx)' })
   @ApiResponse({ status: 202, description: 'Report generation queued' })
   async generateReport(
@@ -37,7 +38,7 @@ export class ReportsController {
 
   @Get(':jobId/status')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Get report generation job status' })
   async getJobStatus(@Req() req: Request, @Param('jobId') jobId: string) {
     const patientId = (req.user as any).id;
