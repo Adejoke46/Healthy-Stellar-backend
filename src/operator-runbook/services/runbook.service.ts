@@ -276,6 +276,9 @@ export class RunbookService {
     if (execution.status !== ExecutionStatus.PENDING_APPROVAL) {
       throw new BadRequestException(`Execution is not pending approval (status: ${execution.status})`);
     }
+    if (!approverId) {
+      throw new ForbiddenException('Approver identity is required');
+    }
     if (execution.initiatedBy === approverId) {
       throw new ForbiddenException('Initiator cannot approve their own execution request');
     }

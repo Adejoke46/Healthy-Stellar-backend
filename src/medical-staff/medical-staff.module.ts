@@ -14,6 +14,7 @@ import { Shift } from './entities/shift.entity';
 import { StaffCredential } from './entities/staff-credential.entity';
 import { CredentialTrackingService } from './services/credential-tracking.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       StaffCredential,
     ]),
     NotificationsModule,
+    AuthModule,
   ],
   controllers: [MedicalStaffController, WardShiftsController, CredentialTrackingController],
   providers: [MedicalStaffService, CredentialTrackingService],

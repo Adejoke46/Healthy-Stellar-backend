@@ -66,6 +66,7 @@ import {
       SubscriptionPlan,
       PatientSubscription,
     ]),
+    AuthModule,
   ],
   controllers: [
     MedicalCodeController,
