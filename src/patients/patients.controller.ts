@@ -31,6 +31,9 @@ import { PatientOwnerGuard } from './guards/patient-owner.guard';
 import { GeoRestrictionGuard } from './guards/geo-restriction.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/services/auth-token.service';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/entities/user.entity';
 import { CurrentUser } from '../common/decorators/audit-context.decorator';
 import { PhiAuditInterceptor } from '../common/interceptors/phi-audit.interceptor';
 
@@ -44,9 +47,15 @@ export class PatientsController {
   ) { }
 
   @Post()
-  @ApiOperation({ summary: 'Register a new patient' })
-  async createPatient(@Body() dto: CreatePatientDto) {
-    return this.patientsService.create(dto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.MEDICAL_RECORDS)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register a new patient (registration staff and admin only)' })
+  @ApiResponse({ status: 201, description: 'Patient registered' })
+  @ApiResponse({ status: 401, description: 'Unauthenticated' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient role' })
+  async createPatient(@Body() dto: CreatePatientDto, @CurrentUser() user: JwtPayload) {
+    return this.patientsService.create(dto, user.userId);
   }
 
   @Get(':id')
