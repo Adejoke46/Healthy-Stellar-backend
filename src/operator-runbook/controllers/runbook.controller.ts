@@ -11,8 +11,16 @@ import {
   UseGuards,
   DefaultValuePipe,
   ParseIntPipe,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { RunbookService } from '../services/runbook.service';
 import {
@@ -26,28 +34,49 @@ import {
   UpdateRunbookDto,
 } from '../dto/runbook.dto';
 import { RunbookCategory, RunbookStatus } from '../entities/runbook.entity';
-import { RequireAdmin } from '../../rbac/decorators/policy.decorator';
-import { HipaaRoles } from '../../rbac/hipaa.decorators';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
+import { JwtPayload } from '../../auth/services/auth-token.service';
 
+/**
+ * Resolves the authenticated operator's identity from the verified JWT.
+ * Never trust identity supplied in the request body.
+ */
+function getActorId(req: Request): string {
+  const user = (req as Request & { user?: JwtPayload & { sub?: string } }).user;
+  const actorId = user?.userId ?? user?.sub;
+  if (!actorId) {
+    throw new UnauthorizedException('Authenticated operator identity is required');
+  }
+  return actorId;
+}
+
+/**
+ * All runbook routes require an authenticated admin. Authorization is enforced
+ * by JwtAuthGuard (401) and RolesGuard (403) at class level so that new routes
+ * are protected by default.
+ */
 @ApiTags('Operator Runbooks')
+@ApiBearerAuth()
 @Controller('operator/runbooks')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 export class RunbookController {
   constructor(private readonly runbookService: RunbookService) {}
 
   // ─── Runbook management ───────────────────────────────────────────────────
 
   @Post()
-  @RequireAdmin()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Create a new operator runbook' })
   @ApiResponse({ status: 201, description: 'Runbook created' })
   async createRunbook(@Body() dto: CreateRunbookDto, @Req() req: Request) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.createRunbook(dto, operatorId);
   }
 
   @Get()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'List runbooks with optional filters' })
   @ApiQuery({ name: 'category', enum: RunbookCategory, required: false })
   @ApiQuery({ name: 'status', enum: RunbookStatus, required: false })
@@ -57,14 +86,12 @@ export class RunbookController {
   }
 
   @Get('executions/active')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Get all active (in-flight) executions' })
   async getActiveExecutions() {
     return this.runbookService.getActiveExecutions();
   }
 
   @Get(':id')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Get a runbook by ID' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   async getRunbook(@Param('id', ParseUUIDPipe) id: string) {
@@ -72,8 +99,6 @@ export class RunbookController {
   }
 
   @Patch(':id')
-  @RequireAdmin()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Update a runbook' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   async updateRunbook(
@@ -81,34 +106,29 @@ export class RunbookController {
     @Body() dto: UpdateRunbookDto,
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.updateRunbook(id, dto, operatorId);
   }
 
   @Patch(':id/publish')
-  @RequireAdmin()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Publish a draft runbook to make it executable' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   async publishRunbook(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.publishRunbook(id, operatorId);
   }
 
   @Patch(':id/deprecate')
-  @RequireAdmin()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Deprecate an active runbook' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   async deprecateRunbook(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.deprecateRunbook(id, operatorId);
   }
 
   // ─── Execution lifecycle ──────────────────────────────────────────────────
 
   @Post(':id/executions')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Initiate a new runbook execution' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 201, description: 'Execution initiated' })
@@ -117,14 +137,13 @@ export class RunbookController {
     @Body() dto: InitiateExecutionDto,
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     const ipAddress = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
     const userAgent = req.get('User-Agent') ?? 'unknown';
     return this.runbookService.initiateExecution(id, dto, operatorId, ipAddress, userAgent);
   }
 
   @Get(':id/executions')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Get execution history for a runbook' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
@@ -136,7 +155,6 @@ export class RunbookController {
   }
 
   @Get(':runbookId/executions/:executionId')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Get a specific execution' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -145,8 +163,6 @@ export class RunbookController {
   }
 
   @Patch(':runbookId/executions/:executionId/approve')
-  @RequireAdmin()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Approve a pending execution (supports dual-approval)' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -155,12 +171,11 @@ export class RunbookController {
     @Body() dto: ApproveExecutionDto,
     @Req() req: Request,
   ) {
-    const approverId = (req as any).user?.sub;
+    const approverId = getActorId(req);
     return this.runbookService.approveExecution(executionId, dto, approverId);
   }
 
   @Patch(':runbookId/executions/:executionId/start')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Start an approved execution' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -168,12 +183,11 @@ export class RunbookController {
     @Param('executionId', ParseUUIDPipe) executionId: string,
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.startExecution(executionId, operatorId);
   }
 
   @Post(':runbookId/executions/:executionId/steps')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Record the result of a completed step' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -182,12 +196,11 @@ export class RunbookController {
     @Body() dto: RecordStepResultDto,
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.recordStepResult(executionId, dto, operatorId);
   }
 
   @Patch(':runbookId/executions/:executionId/complete')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Mark an in-progress execution as completed' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -196,12 +209,11 @@ export class RunbookController {
     @Body() dto: CompleteExecutionDto,
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.completeExecution(executionId, dto, operatorId);
   }
 
   @Patch(':runbookId/executions/:executionId/fail')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Mark an in-progress execution as failed' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -210,13 +222,11 @@ export class RunbookController {
     @Body() body: { errorMessage: string },
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.failExecution(executionId, body.errorMessage, operatorId);
   }
 
   @Patch(':runbookId/executions/:executionId/rollback')
-  @RequireAdmin()
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Rollback an execution' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -225,12 +235,11 @@ export class RunbookController {
     @Body() body: { notes?: string },
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.rollbackExecution(executionId, operatorId, body.notes);
   }
 
   @Patch(':runbookId/executions/:executionId/cancel')
-  @HipaaRoles('operator', 'admin')
   @ApiOperation({ summary: 'Cancel a pending or approved execution' })
   @ApiParam({ name: 'runbookId', type: 'string', format: 'uuid' })
   @ApiParam({ name: 'executionId', type: 'string', format: 'uuid' })
@@ -239,7 +248,7 @@ export class RunbookController {
     @Body() dto: CancelExecutionDto,
     @Req() req: Request,
   ) {
-    const operatorId = (req as any).user?.sub;
+    const operatorId = getActorId(req);
     return this.runbookService.cancelExecution(executionId, dto, operatorId);
   }
 }
