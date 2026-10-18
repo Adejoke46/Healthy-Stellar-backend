@@ -81,12 +81,44 @@ async function bootstrap() {
     throw new Error('ALLOWED_ORIGINS must be set in production');
   }
 
+  // Extra headers can be appended per deployment via comma-separated env vars
+  const parseHeaderList = (value?: string) =>
+    value ? value.split(',').map((h) => h.trim()).filter(Boolean) : [];
+
   app.enableCors({
     origin: allowedOrigins,
     credentials: process.env.CORS_CREDENTIALS === 'true',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Trace-ID'],
-    exposedHeaders: ['X-Total-Count', 'X-Page-Count', 'X-Trace-ID'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-Trace-ID',
+      'X-Request-Id',
+      'Idempotency-Key',
+      'If-Match',
+      'Accept-Language',
+      ...parseHeaderList(process.env.CORS_ALLOWED_HEADERS),
+    ],
+    exposedHeaders: [
+      'X-Total-Count',
+      'X-Page-Count',
+      'X-Trace-ID',
+      'X-Request-Id',
+      'ETag',
+      'Idempotent-Replayed',
+      'Deprecation',
+      'Sunset',
+      'Link',
+      'API-Version',
+      'API-Version-Status',
+      'Retry-After',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+      'X-RateLimit-Category',
+      ...parseHeaderList(process.env.CORS_EXPOSED_HEADERS),
+    ],
     maxAge: 3600,
   });
 
