@@ -18,12 +18,13 @@ export class FeatureFlagGuard implements CanActivate {
 
     if (!flagKey) return true;
 
+    // SECURITY: actor and tenant must come from the authenticated principal
+    // (JwtAuthGuard sets request.user to the JWT payload: userId + organizationId).
+    // Never read x-tenant-id here; a client-supplied header would let callers
+    // target per-tenant flags for a tenant they do not belong to.
     const request = context.switchToHttp().getRequest();
-    const actorId: string | undefined = request.user?.id ?? request.user?.sub;
-    const tenantId: string | undefined =
-      request.user?.tenantId ??
-      request.headers['x-tenant-id'] ??
-      undefined;
+    const actorId: string | undefined = request.user?.userId;
+    const tenantId: string | undefined = request.user?.organizationId ?? undefined;
 
     const enabled = await this.featureFlagService.isEnabled(flagKey, { actorId, tenantId });
     if (!enabled) {
