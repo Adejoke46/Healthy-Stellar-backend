@@ -23,7 +23,7 @@ export class DiagnosisService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async create(createDiagnosisDto: CreateDiagnosisDto): Promise<Diagnosis> {
+  async create(createDiagnosisDto: CreateDiagnosisDto, userId: string): Promise<Diagnosis> {
     // Validate ICD-10 code exists and is active
     const icd10Code = await this.medicalCodeService.findById(createDiagnosisDto.icd10CodeId);
 
@@ -40,13 +40,12 @@ export class DiagnosisService {
       throw new BadRequestException('ICD-10 code is not active');
     }
 
-    const diagnosis = this.diagnosisRepository.create(createDiagnosisDto);
+    const diagnosis = this.diagnosisRepository.create({ ...createDiagnosisDto, createdBy: userId });
     const saved = await this.diagnosisRepository.save(diagnosis);
 
     // Emit diagnosis creation notification
-    const actorId = createDiagnosisDto.createdBy || createDiagnosisDto.providerId || 'system';
     this.notificationsService.emitDiagnosisCreated(
-      actorId,
+      userId,
       saved.id,
       {
         patientId: saved.patientId,
@@ -83,7 +82,7 @@ export class DiagnosisService {
     });
   }
 
-  async update(id: string, updateDiagnosisDto: UpdateDiagnosisDto): Promise<Diagnosis> {
+  async update(id: string, updateDiagnosisDto: UpdateDiagnosisDto, userId: string): Promise<Diagnosis> {
     const diagnosis = await this.findById(id);
 
     // Track changes for history
@@ -91,7 +90,7 @@ export class DiagnosisService {
     const previousValues: Record<string, any> = {};
 
     Object.keys(updateDiagnosisDto).forEach((key) => {
-      if (key !== 'updatedBy' && key !== 'changeReason' && updateDiagnosisDto[key] !== undefined) {
+      if (key !== 'changeReason' && updateDiagnosisDto[key] !== undefined) {
         previousValues[key] = diagnosis[key];
         changes[key] = updateDiagnosisDto[key];
       }
@@ -106,16 +105,16 @@ export class DiagnosisService {
         previousValues,
         changes,
         updateDiagnosisDto.changeReason,
-        updateDiagnosisDto.updatedBy,
+        userId,
       );
     }
 
     // Update diagnosis
     Object.assign(diagnosis, updateDiagnosisDto);
+    diagnosis.updatedBy = userId;
     const saved = await this.diagnosisRepository.save(diagnosis);
 
     // Emit notifications for escalations
-    const actorId = updateDiagnosisDto.updatedBy || diagnosis.providerId || 'system';
     const treatmentPlans = await this.getTreatmentPlansForDiagnosis(diagnosis.id);
     const treatmentPlanIds = treatmentPlans.map(plan => plan.id);
 
@@ -125,7 +124,7 @@ export class DiagnosisService {
       const newSeverityLevel = this.getSeverityLevel(changes.severity);
       if (newSeverityLevel > previousSeverityLevel) {
         this.notificationsService.emitDiagnosisSeverityEscalated(
-          actorId,
+          userId,
           diagnosis.id,
           {
             patientId: diagnosis.patientId,
@@ -142,7 +141,7 @@ export class DiagnosisService {
     // Check for status confirmation
     if (changes.status === DiagnosisStatus.CONFIRMED && previousValues.status !== DiagnosisStatus.CONFIRMED) {
       this.notificationsService.emitDiagnosisStatusConfirmed(
-        actorId,
+        userId,
         diagnosis.id,
         {
           patientId: diagnosis.patientId,
