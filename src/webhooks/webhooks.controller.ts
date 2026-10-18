@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, Inject, Logger, Get, Param, UseGuards, Req, Query, Delete, NotFoundException, Put, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, Inject, Logger, Get, Param, UseGuards, Req, Query, Delete, NotFoundException, ForbiddenException, Put, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { IpfsService } from '../stellar/services/ipfs.service';
 import { QueueService } from '../queues/queue.service';
@@ -170,6 +170,21 @@ export class WebhooksController {
 
   // ── Admin: Deliveries Management ──────────────────────────────────────────
 
+  private tenantIdOf(req: any): string {
+    const tenantId = req.user?.tenantId ?? req.user?.organizationId;
+    if (!tenantId) {
+      throw new ForbiddenException('Tenant context required');
+    }
+    return tenantId;
+  }
+
+  private async assertTenantDelivery(deliveryId: string, tenantId: string): Promise<void> {
+    const exists = await this.deliveryRepository.exist({ where: { id: deliveryId, tenantId } });
+    if (!exists) {
+      throw new NotFoundException(`Webhook delivery ${deliveryId} not found`);
+    }
+  }
+
   @Get('deliveries')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
@@ -180,12 +195,13 @@ export class WebhooksController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   async listDeliveries(
+    @Req() req: any,
     @Query('status') status?: WebhookDeliveryStatus,
     @Query('subscriptionId') subscriptionId?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const where: any = {};
+    const where: any = { tenantId: this.tenantIdOf(req) };
     if (status) where.status = status;
     if (subscriptionId) where.subscriptionId = subscriptionId;
 
@@ -206,9 +222,9 @@ export class WebhooksController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get the delivery attempt history for a webhook delivery' })
   @ApiParam({ name: 'id', type: String })
-  async getDeliveryHistory(@Param('id') id: string) {
+  async getDeliveryHistory(@Req() req: any, @Param('id') id: string) {
     const delivery = await this.deliveryRepository.findOne({
-      where: { id },
+      where: { id, tenantId: this.tenantIdOf(req) },
       relations: ['subscription'],
     });
 
@@ -228,6 +244,7 @@ export class WebhooksController {
   @HttpCode(200)
   async replayDelivery(@Param('id') id: string, @Req() req: any) {
     const userId = req.user?.id || 'unknown';
+    await this.assertTenantDelivery(id, this.tenantIdOf(req));
     await this.webhookService.replayDelivery(id, userId);
     return { success: true, message: 'Webhook delivery queued for replay' };
   }
@@ -244,12 +261,13 @@ export class WebhooksController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   async getDeadLetterQueue(
+    @Req() req: any,
     @Query('status') status?: WebhookDeliveryStatus,
     @Query('subscriptionId') subscriptionId?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const where: any = {};
+    const where: any = { tenantId: this.tenantIdOf(req) };
     if (status) where.status = status;
     if (subscriptionId) where.subscriptionId = subscriptionId;
 
@@ -270,9 +288,9 @@ export class WebhooksController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get details of a failed webhook delivery' })
   @ApiParam({ name: 'deliveryId', type: String })
-  async getDeadLetterItem(@Param('deliveryId') deliveryId: string) {
+  async getDeadLetterItem(@Req() req: any, @Param('deliveryId') deliveryId: string) {
     return this.deliveryRepository.findOne({
-      where: { id: deliveryId },
+      where: { id: deliveryId, tenantId: this.tenantIdOf(req) },
       relations: ['subscription'],
     });
   }
@@ -289,6 +307,7 @@ export class WebhooksController {
     @Req() req: any,
   ) {
     const userId = req.user?.id || 'unknown';
+    await this.assertTenantDelivery(deliveryId, this.tenantIdOf(req));
     await this.webhookService.replayDelivery(deliveryId, userId);
     return { success: true, message: 'Webhook delivery queued for replay' };
   }
@@ -301,10 +320,11 @@ export class WebhooksController {
   @ApiParam({ name: 'deliveryId', type: String })
   @HttpCode(200)
   async discardDeadLetterItem(
+    @Req() req: any,
     @Param('deliveryId') deliveryId: string,
   ) {
     const delivery = await this.deliveryRepository.findOne({
-      where: { id: deliveryId },
+      where: { id: deliveryId, tenantId: this.tenantIdOf(req) },
     });
 
     if (!delivery) {
