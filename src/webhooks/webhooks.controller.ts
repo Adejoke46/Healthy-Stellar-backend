@@ -8,6 +8,7 @@ import { WebhookSubscriptionService } from './services/webhook-subscription.serv
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateWebhookSubscriptionDto, UpdateWebhookSubscriptionDto } from './dto/webhook-subscription.dto';
 import { Repository } from 'typeorm';
@@ -34,7 +35,8 @@ export class WebhooksController {
   // ── Tenant Self-Service Subscription Management ───────────────────────────
 
   @Get('subscriptions')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List webhook subscriptions for the authenticated tenant' })
   async listSubscriptions(@Req() req: any) {
@@ -43,18 +45,21 @@ export class WebhooksController {
   }
 
   @Post('subscriptions')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new webhook subscription (includes validation ping)' })
   @ApiBody({ type: CreateWebhookSubscriptionDto })
   async createSubscription(@Req() req: any, @Body() dto: CreateWebhookSubscriptionDto) {
     const tenantId = req.user?.tenantId ?? req.user?.organizationId;
     const userId = req.user?.id;
+    this.subscriptionService.assertEventsAllowedForRole(req.user?.role, dto.events);
     return this.subscriptionService.createSubscription(tenantId, userId, dto);
   }
 
   @Put('subscriptions/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a webhook subscription' })
   @ApiParam({ name: 'id', type: String })
@@ -66,11 +71,15 @@ export class WebhooksController {
   ) {
     const tenantId = req.user?.tenantId ?? req.user?.organizationId;
     const userId = req.user?.id;
+    if (dto.events !== undefined) {
+      this.subscriptionService.assertEventsAllowedForRole(req.user?.role, dto.events);
+    }
     return this.subscriptionService.updateSubscription(tenantId, id, userId, dto);
   }
 
   @Delete('subscriptions/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a webhook subscription' })
   @ApiParam({ name: 'id', type: String })
@@ -82,7 +91,8 @@ export class WebhooksController {
   }
 
   @Post('subscriptions/:id/rotate-secret')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Rotate the HMAC signing secret for a webhook subscription' })
   @ApiParam({ name: 'id', type: String })
