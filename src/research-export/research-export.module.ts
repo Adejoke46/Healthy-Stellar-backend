@@ -5,6 +5,7 @@ import { Patient } from '../patients/entities/patient.entity';
 import { AccessGrant } from '../access-control/entities/access-grant.entity';
 import { ExportConsentMapping } from './entities/export-consent-mapping.entity';
 import { AuditModule } from '../common/audit/audit.module';
+import { AuthModule } from '../auth/auth.module';
 import { MedicalRbacModule } from '../roles/medical-rbac.module';
 import { ResearchExportController } from './research-export.controller';
 import { ResearchExportService } from './research-export.service';
@@ -15,6 +16,7 @@ import { ConsentRevocationService } from './services/consent-revocation.service'
   imports: [
     TypeOrmModule.forFeature([MedicalRecord, Patient, AccessGrant, ExportConsentMapping]),
     AuditModule,
+    AuthModule,
     MedicalRbacModule,
   ],
   controllers: [ResearchExportController],
