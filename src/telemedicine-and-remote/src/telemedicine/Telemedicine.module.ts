@@ -27,6 +27,7 @@ import { SessionRecording } from '../entity/session-recording.entity';
 import { RecordingService } from '../services/recording.service';
 import { RecordingController } from '../controllers/recording.controller';
 import { VideoConferenceGateway } from '../gateways/Video conference.gateway';
+import { AuthModule } from '../../../auth/auth.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { VideoConferenceGateway } from '../gateways/Video conference.gateway';
       HipaaAuditLogEntity,
       PatientConsentEntity,
     ]),
+    AuthModule,
   ],
   controllers: [
     VirtualVisitController,
