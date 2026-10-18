@@ -14,11 +14,12 @@ import { AnalyticsCacheInterceptor } from './interceptors/analytics-cache.interc
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('Admin Analytics')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles(UserRole.ADMIN)
 @UseInterceptors(AnalyticsCacheInterceptor)
 @Controller('admin/analytics')
 export class AnalyticsController {

@@ -23,6 +23,7 @@ export enum UserRole {
   SUPER_ADMIN = 'super_admin',
   COMPLIANCE_OFFICER = 'compliance_officer',
   SURGEON = 'surgeon',
+  PHARMACIST = 'pharmacist',
 }
 
 export enum UserStatus {
