@@ -24,8 +24,13 @@ export class PushNotificationService {
   ) {}
 
   async registerToken(userId: string, token: string, platform: DevicePlatform): Promise<DeviceToken> {
-    const existing = await this.deviceTokenRepo.findOne({ where: { userId, token } });
+    // A device token identifies a physical device, so it may only belong to one user.
+    // If another user previously registered it (shared tablet/phone), take it over
+    // so the old user's notifications stop reaching this device.
+    const existing = await this.deviceTokenRepo.findOne({ where: { token } });
     if (existing) {
+      existing.userId = userId;
+      existing.platform = platform;
       existing.active = true;
       return this.deviceTokenRepo.save(existing);
     }
