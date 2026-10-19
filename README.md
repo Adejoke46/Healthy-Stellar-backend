@@ -268,7 +268,7 @@ cp .env.example .env
 | Database (primary) | `DATABASE_URL` / `DB_HOST` … `DB_POOL_MAX` |
 | Database (read replica) | `DB_REPLICA_HOST` … `DB_REPLICA_POOL_MAX` |
 | Redis | `REDIS_URL` / `REDIS_HOST` … `REDIS_DB` |
-| JWT & Auth | `JWT_SECRET`, `JWT_EXPIRATION`, `REFRESH_TOKEN_SECRET` |
+| JWT & Auth | `JWT_SECRET`, `JWT_EXPIRATION`, `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRATION` |
 | Encryption / KMS | `ENCRYPTION_MASTER_KEY`, `MASTER_KEY`, `KMS_ENABLED`, `AWS_*` |
 | Stellar / Soroban | `STELLAR_SECRET_KEY`, `STELLAR_CONTRACT_ID`, `SOROBAN_RPC_URL` |
 | IPFS | `IPFS_NODE_URL`, `IPFS_GATEWAY`, `IPFS_FALLBACK_GATEWAY` |
@@ -282,7 +282,7 @@ cp .env.example .env
 
 ## Security Headers
 
-The API applies `helmet()` in `src/main.ts` using the shared configuration in `src/security/http-security.config.ts`.
+The API applies the shared Helmet configuration once through `applySecurityHeaders()` in `src/security/http-security.config.ts`.
 
 **Prerequisites:** Node.js v18+, PostgreSQL v12+
 
@@ -398,7 +398,7 @@ For local development, the routing service initializes SQLite-backed regional da
 | Core               | `NODE_ENV`, `PORT`, `APP_URL`, `APP_DOMAIN`                                                                               |
 | Database           | `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`                                                             |
 | Encryption / PHI   | `ENCRYPTION_KEY`, `PHI_ENCRYPTION_KEY`                                                                                    |
-| JWT & Auth         | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SESSION_SECRET`                                                                      |
+| JWT & Auth         | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_REFRESH_EXPIRATION`, `SESSION_SECRET` |
 | CORS & Security    | `ALLOWED_ORIGINS`, `CORS_ORIGIN`, `ADMIN_IP_ALLOWLIST`                                                                    |
 | Redis              | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`                                                                              |
 | Email              | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`                                                                    |
@@ -420,14 +420,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ## Security Headers
 
-Configured via `helmet()` in `src/main.ts` using `src/security/http-security.config.ts`:
+The API applies the shared Helmet configuration once through `applySecurityHeaders()` in `src/security/http-security.config.ts`:
 
-- `Content-Security-Policy` — restricts script/style/asset sources to prevent XSS
-- `X-Frame-Options: DENY` — blocks clickjacking via iframes
-- `X-Content-Type-Options: nosniff` — prevents MIME-type sniffing
-- `Strict-Transport-Security` — enforces HTTPS
-- `Referrer-Policy: no-referrer` — suppresses referrer leakage
-- `X-XSS-Protection: 0` — disables legacy browser XSS filter in favour of CSP
+- `Content-Security-Policy` — defaults to same-origin resources, blocks object embedding and framing, and uses a per-request nonce for scripts. Development additionally allows the Swagger CDN.
+- `X-Frame-Options: DENY` — blocks clickjacking through iframes.
+- `X-Content-Type-Options: nosniff` — prevents MIME-type sniffing.
+- `Strict-Transport-Security` — enables HTTPS-only access with a one-year max age, subdomains, and preload.
+- `Referrer-Policy: no-referrer` — suppresses referrer information.
+- `X-XSS-Protection: 0` — disables the legacy browser filter; CSP provides the script policy.
 
 ## API Endpoints
 
@@ -538,7 +538,7 @@ replay, projection rebuilds, and backup/restore — see the
 
 ## License
 
-MIT
+ISC. See [LICENSE](LICENSE).
 
 ## Handsoff notes
 

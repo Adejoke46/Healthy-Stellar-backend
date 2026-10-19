@@ -36,7 +36,10 @@ export const buildHelmetOptions = (): Parameters<typeof helmet>[0] => ({
       mediaSrc: ["'self'"],
       workerSrc: ["'none'"],
       // Directive values vary by environment (see above)
-      scriptSrc: swaggerAssets.scriptSrc,
+      scriptSrc: [
+        ...swaggerAssets.scriptSrc,
+        (_req, res: any) => `'nonce-${res.locals.nonce}'`,
+      ],
       styleSrc: swaggerAssets.styleSrc,
       imgSrc: swaggerAssets.imgSrc,
       fontSrc: swaggerAssets.fontSrc,

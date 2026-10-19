@@ -6,7 +6,6 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CustomI18nValidationFilter } from './common/filters/i18n-validation.filter';
-import helmet from 'helmet';
 import { nonceMiddleware } from './common/middleware/nonce.middleware';
 import { DeprecationInterceptor } from './common/interceptors/deprecation.interceptor';
 import { Logger } from 'nestjs-pino';
@@ -27,43 +26,10 @@ async function bootstrap() {
     defaultVersion: ['1', VERSION_NEUTRAL],
   });
 
-  // Security headers are shared with the integration test to keep runtime and verification aligned.
-  applySecurityHeaders(app);
-  // Nonce generation middleware for CSP
+  // Generate the nonce before Helmet evaluates the shared CSP configuration.
   app.use(nonceMiddleware);
-
-  // Security Headers - Helmet Configuration
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"], // Required for Swagger UI
-          scriptSrc: ["'self'", (req, res: any) => `'nonce-${res.locals.nonce}'`], // Use nonce for inline scripts
-          imgSrc: ["'self'", 'data:', 'https:'],
-          connectSrc: ["'self'"],
-          fontSrc: ["'self'"],
-          objectSrc: ["'none'"],
-          mediaSrc: ["'self'"],
-          frameSrc: ["'none'"],
-        },
-      },
-      crossOriginEmbedderPolicy: false, // Required for Swagger UI
-      hsts: {
-        maxAge: 31536000, // 1 year
-        includeSubDomains: true,
-        preload: true,
-      },
-      frameguard: {
-        action: 'deny',
-      },
-      noSniff: true,
-      xssFilter: true,
-      referrerPolicy: {
-        policy: 'strict-origin-when-cross-origin',
-      },
-    }),
-  );
+  // Keep runtime headers aligned with the security-header integration test.
+  applySecurityHeaders(app);
 
   // Remove X-Powered-By header
   app.getHttpAdapter().getInstance().disable('x-powered-by');
