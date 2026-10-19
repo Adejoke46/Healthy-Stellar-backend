@@ -7,10 +7,10 @@ NestJS backend for a decentralized healthcare system built on Stellar Soroban sm
 - [Project Structure](#project-structure)
 - [Local Development with Docker](#local-development-with-docker)
 - [Background Worker Process](#background-worker-process)
-- [Installation & Setup](#installation--setup)
+- [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Scripts Reference](#scripts-reference)
-- [Core Modules](#core-modules)
+- [Security Headers](#security-headers)
 - [API Endpoints](#api-endpoints)
 - [Webhooks](#webhooks)
 - [Postman Collection](#postman-collection)
@@ -223,8 +223,20 @@ If you run the NestJS API locally using `npm run start:dev`, you **MUST** also s
 npm run start:worker:dev
 ```
 
-The application will be available at `http://localhost:3000`
-Swagger documentation will be available at `http://localhost:3000/api`
+The application will be available at `http://localhost:3000`.
+Swagger documentation will be available at `http://localhost:3000/api`.
+
+## Getting Started
+
+**Prerequisites:** Node.js v18+ and PostgreSQL v12+.
+
+1. Install dependencies with `npm install`.
+2. Copy `.env.example` to `.env` and configure the required values.
+3. Run database migrations with `npm run migration:run`.
+4. Start the API with `npm run start:dev`.
+5. In a separate terminal, start the background worker with `npm run start:worker:dev`.
+
+Run `npm run seed` only when you want to populate a development database with sample data.
 
 ## Scripts Reference
 
@@ -279,30 +291,6 @@ cp .env.example .env
 | GraphQL subscriptions | `SUBSCRIPTIONS_IDLE_TIMEOUT_MS`, `SUBSCRIPTIONS_MAX_PER_CONNECTION` |
 | Ops / alerting | `OPS_SLACK_WEBHOOK_URL`, `QUEUE_DEPTH_THRESHOLD` |
 | Migrations | `MIGRATION_EXECUTOR`, `CONFIRM_PRODUCTION_MIGRATION` |
-
-## Security Headers
-
-The API applies `helmet()` in `src/main.ts` using the shared configuration in `src/security/http-security.config.ts`.
-
-**Prerequisites:** Node.js v18+, PostgreSQL v12+
-
-1. Install dependencies:
-   `npm install`
-2. Set up environment variables:
-   `cp .env.example .env`
-3. Run database migrations:
-   `npm run migration:run`
-4. **Seed the database with test data:**
-   `npm run seed`
-   _(Why added: This generates fake users, medical records, and access grants via `src/database/seeder.ts` so you can log in and test the application)._
-5. Start the development server:
-   `npm run start:dev`
-6. Start the background job worker process:
-   `npm run start:worker:dev`
-
-## Configuration
-
-Copy `.env.example` to `.env`. Key sections:
 
 ### Data residency and multi-region routing
 
@@ -393,25 +381,6 @@ Tenant data residency policy prohibits access outside the configured region.
 
 For local development, the routing service initializes SQLite-backed regional datasources so tests and simulations can verify region selection without a full multi-database deployment.
 
-| Section            | Variables                                                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| Core               | `NODE_ENV`, `PORT`, `APP_URL`, `APP_DOMAIN`                                                                               |
-| Database           | `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`                                                             |
-| Encryption / PHI   | `ENCRYPTION_KEY`, `PHI_ENCRYPTION_KEY`                                                                                    |
-| JWT & Auth         | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SESSION_SECRET`                                                                      |
-| CORS & Security    | `ALLOWED_ORIGINS`, `CORS_ORIGIN`, `ADMIN_IP_ALLOWLIST`                                                                    |
-| Redis              | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`                                                                              |
-| Email              | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`                                                                    |
-| Stellar Blockchain | `STELLAR_NETWORK`, `STELLAR_SECRET_KEY`, `STELLAR_CONTRACT_ID`                                                            |
-| Data Residency     | `DEFAULT_REGION`, `DB_TYPE_*`, `DB_HOST_*`, `DB_PORT_*`, `DB_NAME_*`, `*_DB_URL`, `STELLAR_HORIZON_*_URL`, `IPFS_NODES_*` |
-| IPFS               | `IPFS_HOST`, `IPFS_PORT`, `IPFS_URL`                                                                                      |
-| Webhooks           | `IPFS_WEBHOOK_SECRET`, `STELLAR_WEBHOOK_SECRET`, `QUEUE_HMAC_SECRET`                                                      |
-| OIDC / SSO         | `OIDC_PROVIDERS`, `OIDC_{PROVIDER}_CLIENT_ID`, …                                                                          |
-| Logging            | `LOG_LEVEL`, `LOKI_HOST`                                                                                                  |
-| Metrics & Tracing  | `METRICS_TOKEN`, `OTEL_EXPORTER_OTLP_ENDPOINT`                                                                            |
-| Backup             | `BACKUP_DIR`, `BACKUP_ENCRYPTION_KEY`, `BACKUP_RETENTION_DAYS`                                                            |
-| Feature Flags      | `TELEMEDICINE_ENABLED`, `SURGICAL_MANAGEMENT_ENABLED`                                                                     |
-
 Generate secrets with:
 
 ```bash
@@ -499,27 +468,16 @@ All non-FHIR errors return a consistent envelope (`statusCode`, `error`, `messag
 
 See [`docs/errors.md`](docs/errors.md) for the full error-code catalog (HTTP status, meaning, and retryability for every code), the exception-filter order, sanitization rules, and how `traceId` maps to logs and tracing for support requests.
 
+## Testing
+
 See **[docs/scripts.md](docs/scripts.md)** for the full list of test scripts and their prerequisites.
 
-### Quick reference
-
 ```bash
-npm run test        # unit
-npm run test:e2e    # e2e
-npm run test:cov    # coverage
-```
-
-# Unit tests with coverage
-npm run test:cov
-
-# E2E tests (requires Docker — starts a PostgreSQL container)
-npm run test:e2e
-
-# Full coverage (unit + e2e)
-npm run test:all:cov
-
-# HIPAA/GDPR compliance tests
-npm run test:compliance
+npm run test          # Unit tests
+npm run test:e2e      # End-to-end tests (requires Docker)
+npm run test:cov      # Unit-test coverage
+npm run test:all:cov  # Unit and end-to-end coverage
+npm run test:compliance  # HIPAA/GDPR compliance tests
 ```
 
 ## Deployment
@@ -539,17 +497,3 @@ replay, projection rebuilds, and backup/restore — see the
 ## License
 
 MIT
-
-## Handsoff notes
-
-<!-- handsoff-issue-1062 -->
-- #1062: [High] `GdprProcessor.onModuleInit()` — GDPR erasure cascade omits the surgical-management-system module
-
-<!-- handsoff-issue-1064 -->
-- #1064: [High] `SurgicalService.updateSurgicalCase()` reschedule path bypasses the advisory lock, allowing double-booking on reschedule
-
-<!-- handsoff-issue-1023 -->
-- #1023: [Critical] `EhrImportProcessor.process()` — uploads imported HL7/CCD/CSV records to IPFS without encryption
-
-<!-- handsoff-issue-1039 -->
-- #1039: [Critical] `OnboardingService.activate()` persists the newly generated tenant Stellar secret key in plaintext
