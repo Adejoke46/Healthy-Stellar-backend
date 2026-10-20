@@ -41,8 +41,8 @@ export class WebhookSubscription {
   @Column({ type: 'jsonb' })
   events: string[]; // e.g., ['patient.created', 'prescription.issued', 'lab.result.available']
 
-  /** Shared secret for HMAC signature verification */
-  @Column({ type: 'varchar', length: 256, nullable: true })
+  /** Shared secret for HMAC signature verification (never selected by default) */
+  @Column({ type: 'varchar', length: 256, nullable: true, select: false })
   secret: string | null;
 
   /** Is this subscription currently active */
