@@ -48,7 +48,7 @@ export class PatientsService {
     private readonly tenantFieldValidationService: TenantFieldValidationService,
   ) {}
 
-  async create(dto: CreatePatientDto): Promise<Patient> {
+  async create(dto: CreatePatientDto, registeredBy?: string): Promise<Patient> {
     if (dto?.dateOfBirth && Number.isNaN(new Date(dto.dateOfBirth as any).getTime())) {
       throw new BadRequestException('Invalid date of birth');
     }
@@ -78,6 +78,7 @@ export class PatientsService {
       mrn: generateMRN(),
       isAdmitted: false,
       isActive: true,
+      registeredBy: registeredBy ?? null,
     } as any as Patient);
 
     return this.patientRepo.save(patient);
