@@ -16,6 +16,9 @@ import { ApiVersionLifecycleInterceptor } from './versioning/api-version-lifecyc
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
+  // Run onModuleDestroy/onApplicationShutdown hooks (Redis locks, DB pools, etc.) on SIGTERM/SIGINT
+  app.enableShutdownHooks();
+
   // Use Pino logger
   app.useLogger(app.get(Logger));
   app.flushLogs();
