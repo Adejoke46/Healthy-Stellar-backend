@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../auth/guards/roles.guard';
 import { Roles } from '../../../auth/decorators/roles.decorator';
@@ -11,7 +12,7 @@ import { UserRole } from '../../../auth/entities/user.entity';
 import { RecordingService } from '../services/recording.service';
 
 @ApiTags('telemedicine/recordings')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('telemedicine/sessions')
 export class RecordingController {

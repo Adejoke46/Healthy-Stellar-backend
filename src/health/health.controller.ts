@@ -1,5 +1,6 @@
 import { Controller, Get, UseGuards, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import {
   HealthCheck,
   HealthCheckService,
@@ -148,7 +149,7 @@ export class HealthController {
 
   @Get('detailed')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Detailed admin health diagnostics' })
   @ApiResponse({ status: 200, description: 'Detailed health report' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

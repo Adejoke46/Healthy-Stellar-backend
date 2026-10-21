@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Body, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { CohortQueryService } from './cohort-query.service';
 import { CohortReportsService } from './cohort-reports.service';
 import { CohortQueryDto } from './dto/cohort-query.dto';
@@ -19,7 +20,7 @@ import { AdminGuard } from '../auth/guards/admin.guard';
  * connection rather than the primary database (see ReadReplicaService).
  */
 @ApiTags('Analytics - Cohorts')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('analytics')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AnalyticsCohortsController {

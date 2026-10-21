@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { SpecimensService } from '../services/specimens.service';
 import { CreateSpecimenDto } from '../dto/create-specimen.dto';
 import { SpecimenStatus } from '../entities/specimen.entity';
@@ -7,7 +8,7 @@ import { SpecimenStatus } from '../entities/specimen.entity';
 @ApiTags('Laboratory - Specimens')
 @Controller('laboratory/specimens')
 // @UseGuards(JwtAuthGuard, RolesGuard)
-// @ApiBearerAuth()
+// @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class SpecimensController {
   constructor(private readonly specimensService: SpecimensService) {}
 

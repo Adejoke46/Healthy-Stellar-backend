@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -25,7 +26,7 @@ import { HandoffService } from '../services/handoff.service';
 import { CreateHandoffDto, HandoffQueryDto } from '../dto/handoff.dto';
 
 @ApiTags('Provider-Patient Relationships')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('provider-patient/handoffs')
 export class HandoffController {

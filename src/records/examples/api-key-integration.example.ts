@@ -1,5 +1,6 @@
 import { Get, Controller, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { ApiKeyScopes } from '../auth/decorators/api-key-scopes.decorator';
 import { ApiKeyScope } from '../auth/entities/api-key.entity';
@@ -19,7 +20,7 @@ export class RecordsExampleController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get record by ID (JWT)' })
   @ApiResponse({ status: 200, description: 'Record details' })
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   async getRecordByIdJwt(@Param('id') id: string) {
     return { id, method: 'JWT' };
   }

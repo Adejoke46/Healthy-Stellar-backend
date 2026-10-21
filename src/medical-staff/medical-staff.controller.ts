@@ -11,6 +11,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -41,7 +42,7 @@ export const STAFF_READ_ROLES = [
 const PERFORMANCE_ADMIN_ROLES = [UserRole.ADMIN, UserRole.SUPER_ADMIN];
 
 @ApiTags('medical-staff')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Controller('medical-staff')
 export class MedicalStaffController {

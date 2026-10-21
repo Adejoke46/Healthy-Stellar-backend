@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { WaitlistService } from '../services/waitlist.service';
 import { JoinWaitlistDto } from '../dto/waitlist.dto';
 
 @ApiTags('Appointments – Waitlist')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('appointments/waitlist')
 export class WaitlistController {

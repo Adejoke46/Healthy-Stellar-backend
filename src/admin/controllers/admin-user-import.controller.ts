@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PolicyGuard } from '../../rbac/guards/policy.guard';
@@ -30,7 +31,7 @@ import { UserImportService } from '../services/user-import.service';
 @Controller('admin/users/import')
 @UseGuards(IpAllowlistGuard, JwtAuthGuard, PolicyGuard)
 @RequireAdmin()
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class AdminUserImportController {
   constructor(private readonly importService: UserImportService) {}
 

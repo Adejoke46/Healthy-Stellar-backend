@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query, UseGuards, ForbiddenException, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -8,7 +9,7 @@ import { PatientProvidersService } from '../services/patient-providers.service';
 import { PatientProvidersQueryDto } from '../dto/patient-providers-query.dto';
 
 @ApiTags('patients')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('patients')
 export class PatientProvidersController {

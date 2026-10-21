@@ -12,6 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { AdminModule } from '../admin.module';
 import {
@@ -30,7 +31,7 @@ import { IpAllowlistGuard } from '../../common/guards/ip-allowlist.guard';
 @Controller('admin/api-keys')
 @UseGuards(IpAllowlistGuard, JwtAuthGuard, PolicyGuard)
 @RequireAdmin()
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class AdminController {
   constructor(private apiKeyService: ApiKeyService) {}
 

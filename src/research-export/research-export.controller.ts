@@ -1,5 +1,6 @@
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { Response } from 'express';
 import { CurrentMedicalUser, RequirePermissions } from '../roles/medical-rbac.decorator';
 import { MedicalPermission } from '../roles/medical-roles.enum';
@@ -23,7 +24,7 @@ export class ResearchExportController {
 
   @Post('anonymized')
   @RequirePermissions(MedicalPermission.RESEARCH_EXPORT)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Stream a k-anonymized research dataset as NDJSON',
     description:

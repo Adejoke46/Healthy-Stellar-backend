@@ -1,6 +1,6 @@
 import { Controller, Get, Post, HttpCode, HttpStatus, Param, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { ConsistencyCheckerService, ConsistencyReport } from './consistency-checker.service';
 import { ConsistencyIncident } from './consistency-incident.entity';
 import { ResolveIncidentDto } from './dto/resolve-incident.dto';
@@ -10,7 +10,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../auth/entities/user.entity';
 
 @ApiTags('consistency-checker')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @Controller('consistency')

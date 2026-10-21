@@ -16,6 +16,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { Request } from 'express';
 import { ReportScheduleService } from './report-schedule.service';
 import { CreateReportScheduleDto, UpdateReportScheduleDto } from './dto/report-schedule.dto';
@@ -59,7 +60,7 @@ export class ReportScheduleUnsubscribeController {
 }
 
 @ApiTags('Admin - Report Schedules')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('admin/report-schedules')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)

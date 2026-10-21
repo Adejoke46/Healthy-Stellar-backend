@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { NotificationPreferenceCenterService } from '../services/notification-preference-center.service';
 import { UpdateCategoryPreferenceDto, CategoryPreferenceResponseDto } from '../dto/notification-category-preference.dto';
 
 @ApiTags('Notification Preferences')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('notifications/preferences')
 export class NotificationPreferencesController {

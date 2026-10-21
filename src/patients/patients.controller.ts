@@ -16,6 +16,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 
 import { PatientsService } from './patients.service';
 import { PatientTimelineService } from './services/patient-timeline.service';
@@ -98,7 +99,7 @@ export class PatientsController {
 
   @Patch(':address/notification-preferences')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Update notification preferences for the authenticated patient' })
   @ApiResponse({ status: 200, description: 'Notification preferences updated' })
   @ApiResponse({

@@ -17,6 +17,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Response } from 'express';
 import { FhirService } from '../services/fhir.service';
 import { BulkExportService } from '../services/bulk-export.service';
@@ -27,7 +28,7 @@ import { FhirOperationOutcome } from '../dto/fhir-resources.dto';
 import { ExportScope } from '../entities/bulk-export-job.entity';
 
 @ApiTags('FHIR R4')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('fhir/r4')
 @UseFilters(FhirExceptionFilter)
 @UseGuards(JwtAuthGuard)

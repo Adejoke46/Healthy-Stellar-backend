@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PushNotificationService } from '../services/push-notification.service';
 import { RegisterDeviceTokenDto, DeregisterDeviceTokenDto } from '../dto/device-token.dto';
 
 @ApiTags('Push Notifications')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('notifications/device-tokens')
 export class DeviceTokenController {

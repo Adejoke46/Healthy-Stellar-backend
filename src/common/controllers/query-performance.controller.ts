@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Query, UseGuards, DefaultValuePipe, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../constants/swagger.constants';
 import { QueryPerformanceMonitor } from '../services/query-performance-monitor.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -9,7 +10,7 @@ import { UserRole } from '../../auth/entities/user.entity';
 @ApiTags('Query Performance')
 @Controller('admin/query-performance')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class QueryPerformanceController {
   constructor(private readonly monitor: QueryPerformanceMonitor) {}
 

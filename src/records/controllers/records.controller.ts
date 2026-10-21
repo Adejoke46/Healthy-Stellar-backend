@@ -19,6 +19,7 @@ import {
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { RecordsService } from '../services/records.service';
 import { RecordDownloadService } from '../services/record-download.service';
 import { RecordAttachmentUploadService } from '../services/record-attachment-upload.service';
@@ -148,7 +149,7 @@ export class RecordsController {
 
   @Get('search')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Search records with dynamic filtering',
     description:
@@ -177,7 +178,7 @@ export class RecordsController {
   }
 
   @Get('recent')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @UseGuards(JwtAuthGuard, MedicalRbacGuard)
   @MedicalRoles(MedicalRole.ADMIN)
   @ApiOperation({ summary: 'Get latest platform activity (Admin only)' })
@@ -203,7 +204,7 @@ export class RecordsController {
 
   @Post(':id/amend')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 10 * 1024 * 1024 },
@@ -235,7 +236,7 @@ export class RecordsController {
 
   @Get(':id/versions')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'List all versions of a record' })
   @ApiResponse({ status: 200, description: 'Versions retrieved', type: PaginatedVersionsResponseDto })
   @ApiResponse({ status: 404, description: 'Record not found' })
@@ -249,7 +250,7 @@ export class RecordsController {
 
   @Get(':id/versions/:version')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Get metadata for a specific record version' })
   @ApiResponse({ status: 200, description: 'Version metadata', type: RecordVersionMetaDto })
   @ApiResponse({ status: 404, description: 'Record or version not found' })
@@ -262,7 +263,7 @@ export class RecordsController {
 
   @Get(':id/diff')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Diff two versions of a record' })
   @ApiResponse({ status: 200, description: 'Diff result', type: RecordDiffResponseDto })
   @ApiResponse({ status: 404, description: 'Record or version not found' })
@@ -276,7 +277,7 @@ export class RecordsController {
 
   @Get(':id/download')
   @UseGuards(JwtAuthGuard, RecordAccessGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Download a record (owner or granted user)' })
   @ApiResponse({ status: 200, description: 'Record file stream' })
   @ApiResponse({ status: 403, description: 'Access denied' })
@@ -295,7 +296,7 @@ export class RecordsController {
 
   @Post(':id/attachments')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 10 * 1024 * 1024 },
@@ -320,7 +321,7 @@ export class RecordsController {
 
   @Get(':id/related')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'List records related to a record' })
   @ApiResponse({ status: 200, description: 'Related records', type: [RelatedRecordDto] })
   @ApiResponse({ status: 404, description: 'Record not found' })

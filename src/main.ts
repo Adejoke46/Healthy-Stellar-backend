@@ -12,6 +12,7 @@ import { DeprecationInterceptor } from './common/interceptors/deprecation.interc
 import { Logger } from 'nestjs-pino';
 import { applySecurityHeaders } from './security/http-security.config';
 import { ApiVersionLifecycleInterceptor } from './versioning/api-version-lifecycle.interceptor';
+import { API_BEARER_AUTH_SCHEME } from './common/constants/swagger.constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -212,7 +213,7 @@ async function bootstrap() {
         bearerFormat: 'JWT',
         description: 'Medical staff authentication token',
       },
-      'medical-auth',
+      API_BEARER_AUTH_SCHEME,
     )
     .addTag('Medical Records', 'Patient medical record management')
     .addTag('Clinical Templates', 'Standardized clinical documentation')
@@ -247,25 +248,32 @@ async function bootstrap() {
     }
   `;
 
-  SwaggerModule.setup('api', app, document, {
-    customCss,
-    customSiteTitle: 'Medical API Documentation',
-    customfavIcon: '/favicon-medical.ico',
-    swaggerOptions: {
-      persistAuthorization: true,
-      displayRequestDuration: true,
-      filter: true,
-      showExtensions: true,
-      showCommonExtensions: true,
-    },
-  });
+  // The route map is only exposed outside production unless SWAGGER_ENABLED=true is set explicitly
+  const swaggerEnabled =
+    process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true';
+  if (swaggerEnabled) {
+    SwaggerModule.setup('api', app, document, {
+      customCss,
+      customSiteTitle: 'Medical API Documentation',
+      customfavIcon: '/favicon-medical.ico',
+      swaggerOptions: {
+        persistAuthorization: true,
+        displayRequestDuration: true,
+        filter: true,
+        showExtensions: true,
+        showCommonExtensions: true,
+      },
+    });
+  }
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  
+
   const logger = app.get(Logger);
   logger.log(`🏥 Medical System API: http://localhost:${port}`);
-  logger.log(`📚 API Documentation: http://localhost:${port}/api`);
+  if (swaggerEnabled) {
+    logger.log(`📚 API Documentation: http://localhost:${port}/api`);
+  }
 }
 
 bootstrap();
