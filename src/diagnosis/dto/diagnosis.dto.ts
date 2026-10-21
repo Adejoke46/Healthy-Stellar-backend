@@ -117,11 +117,6 @@ export class CreateDiagnosisDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
-
-  @ApiPropertyOptional({ description: 'User UUID who created the diagnosis' })
-  @IsOptional()
-  @IsUUID()
-  createdBy?: string;
 }
 
 export class UpdateDiagnosisDto {
@@ -184,11 +179,6 @@ export class UpdateDiagnosisDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
-
-  @ApiPropertyOptional({ description: 'User UUID who updated the diagnosis' })
-  @IsOptional()
-  @IsUUID()
-  updatedBy?: string;
 
   @ApiPropertyOptional({ description: 'Reason for the change' })
   @IsOptional()

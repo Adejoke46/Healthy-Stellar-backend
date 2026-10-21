@@ -188,6 +188,10 @@ export class Patient {
   @Column({ default: true })
   isActive: boolean; // archived vs active
 
+  /** Authenticated user who registered this patient (JWT userId). */
+  @Column({ type: 'varchar', nullable: true })
+  registeredBy?: string | null;
+
   /**
    * -----------------------------
    * Geo-Restriction

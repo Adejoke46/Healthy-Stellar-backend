@@ -39,6 +39,7 @@ const FLAG = {
 @Injectable()
 export class ConsistencyCheckerService {
   private readonly logger = new Logger(ConsistencyCheckerService.name);
+  private lastReport: ConsistencyReport | null = null;
 
   constructor(
     @InjectRepository(MedicalRecord)
@@ -98,7 +99,13 @@ export class ConsistencyCheckerService {
       this.logger.log('Consistency check passed — no integrity issues detected');
     }
 
-    return { healthy: drifts.length === 0, drifts, checkedAt: new Date() };
+    this.lastReport = { healthy: drifts.length === 0, drifts, checkedAt: new Date() };
+    return this.lastReport;
+  }
+
+  /** Most recent report from any run (manual or scheduled), or null if none yet */
+  getLastReport(): ConsistencyReport | null {
+    return this.lastReport;
   }
 
   async listOpenIncidents(): Promise<ConsistencyIncident[]> {
