@@ -13,7 +13,6 @@ export enum DevicePlatform {
 }
 
 @Entity('device_tokens')
-@Index(['userId', 'token'], { unique: true })
 export class DeviceToken {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -22,7 +21,7 @@ export class DeviceToken {
   @Column()
   userId: string;
 
-  @Column()
+  @Column({ unique: true })
   token: string;
 
   @Column({ type: 'varchar' })

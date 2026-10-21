@@ -66,6 +66,15 @@ export class WebhookDeliveryService {
     try {
       // Find active subscriptions interested in this event type
       const subscriptions = await this.subscriptionRepository.find({
+        select: {
+          id: true,
+          tenantId: true,
+          url: true,
+          events: true,
+          secret: true,
+          maxRetries: true,
+          metadata: true,
+        },
         where: {
           isActive: true,
           ...(tenantId ? { tenantId } : {}),
@@ -398,6 +407,11 @@ export class WebhookDeliveryService {
 
     await this.deliveryRepository.save(delivery);
 
+    const secret = await this.subscriptionRepository.findOne({
+      where: { id: delivery.subscription.id },
+      select: { id: true, secret: true },
+    });
+
     // Re-queue the job
     await this.webhookQueue.add(
       JOB_TYPES.WEBHOOK_DELIVER,
@@ -407,7 +421,7 @@ export class WebhookDeliveryService {
         subscriptionUrl: delivery.subscription.url,
         eventType: delivery.eventType,
         eventPayload: delivery.eventPayload,
-        subscriptionSecret: delivery.subscription.secret,
+        subscriptionSecret: secret?.secret ?? undefined,
         customHeaders: delivery.subscription.metadata.customHeaders as Record<string, string>,
         tenantId: delivery.tenantId,
       } as WebhookDeliveryJobData,

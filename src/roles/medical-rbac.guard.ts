@@ -27,6 +27,18 @@ import { EmergencyOverrideService } from './emergency-override.service';
 import { MedicalAuditService } from './medical-audit.service';
 import { MedicalPermissionsService } from './medical-permissions.service';
 
+/**
+ * JWT tokens carry the account-level `UserRole` (lowercase) in a single `role`
+ * claim. Map each one onto the medical roles the permission map is keyed on.
+ */
+const JWT_ROLE_CLAIM_MAP: Record<string, MedicalRole[]> = {
+  admin: [MedicalRole.ADMIN],
+  super_admin: [MedicalRole.ADMIN],
+  physician: [MedicalRole.DOCTOR],
+  surgeon: [MedicalRole.DOCTOR],
+  nurse: [MedicalRole.NURSE],
+};
+
 @Injectable()
 export class MedicalRbacGuard implements CanActivate {
   private readonly logger = new Logger(MedicalRbacGuard.name);
@@ -40,11 +52,15 @@ export class MedicalRbacGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const user: MedicalUser = request.medicalUser;
+    const user: MedicalUser | undefined =
+      request.medicalUser ?? this.toMedicalUser(request.user);
 
     if (!user) {
       throw new UnauthorizedException('No authenticated medical user found');
     }
+
+    // Persist the hydrated user so @CurrentMedicalUser can read it.
+    request.medicalUser = user;
 
     const requiredRoles = this.reflector.getAllAndOverride<MedicalRole[]>(MEDICAL_ROLES_KEY, [
       context.getHandler(),
@@ -142,6 +158,23 @@ export class MedicalRbacGuard implements CanActivate {
     // Log successful access
     await this.logAccess(user, resourceName, patientId, ipAddress, false);
     return true;
+  }
+
+  /**
+   * Builds a MedicalUser from the JWT payload attached by JwtAuthGuard.
+   */
+  private toMedicalUser(payload: any): MedicalUser | undefined {
+    if (!payload) {
+      return undefined;
+    }
+
+    return {
+      id: payload.userId ?? payload.id,
+      staffId: payload.staffId,
+      roles: JWT_ROLE_CLAIM_MAP[payload.role] ?? [],
+      department: payload.department,
+      specialties: payload.specialties,
+    } as MedicalUser;
   }
 
   private async logAccess(

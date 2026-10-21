@@ -22,6 +22,14 @@ import {
 /** Lock-namespace prefix for transactional advisory locks. */
 const ADVISORY_LOCK_NAMESPACE = 'bed_occupancy';
 
+export const ALLOWED_BED_STATUS_TRANSITIONS: Record<BedStatus, BedStatus[]> = {
+  [BedStatus.AVAILABLE]: [BedStatus.MAINTENANCE, BedStatus.CLEANING, BedStatus.RESERVED],
+  [BedStatus.CLEANING]: [BedStatus.AVAILABLE, BedStatus.MAINTENANCE],
+  [BedStatus.MAINTENANCE]: [BedStatus.AVAILABLE, BedStatus.CLEANING],
+  [BedStatus.RESERVED]: [BedStatus.AVAILABLE, BedStatus.MAINTENANCE, BedStatus.CLEANING],
+  [BedStatus.OCCUPIED]: [],
+};
+
 @Injectable()
 export class BedOccupancyService {
   constructor(
@@ -83,15 +91,16 @@ export class BedOccupancyService {
     }
 
     const lockKey = `${ADVISORY_LOCK_NAMESPACE}:bed:${bedId}`;
-    const lockResult = await transactionalEntityManager.query(
+    const lockResult = (await transactionalEntityManager.query(
       `SELECT pg_try_advisory_xact_lock(hashtext($1)) AS acquired`,
       [lockKey],
-    );
+    )) as Array<{ acquired?: boolean }>;
 
     const acquired = Array.isArray(lockResult) && lockResult[0]?.acquired === true;
     if (!acquired) {
       throw new ConflictException({
-        message: 'Another assignment is currently being processed for this bed. Please retry in a moment.',
+        message:
+          'Another assignment is currently being processed for this bed. Please retry in a moment.',
         code: 'BED_ASSIGNMENT_LOCK_BUSY',
       });
     }
@@ -100,12 +109,12 @@ export class BedOccupancyService {
   async assignBed(dto: AssignBedDto): Promise<Bed> {
     // Wrap in transaction with advisory locking to prevent concurrent double-booking
     return this.bedRepo.manager.transaction(
-      async (transactionalEntityManager) => {
+      async (transactionalEntityManager: EntityManager): Promise<Bed> => {
         // Acquire advisory lock to serialize concurrent assignments for this bed
         await this.acquireBedLock(transactionalEntityManager, dto.bedId);
 
         // Load bed within transaction with pessimistic lock
-        const bed = await transactionalEntityManager
+        const bed: Bed | null = await transactionalEntityManager
           .createQueryBuilder(Bed, 'bed')
           .useLock('pessimistic_write')
           .where('bed.id = :id', { id: dto.bedId })
@@ -140,13 +149,50 @@ export class BedOccupancyService {
   }
 
   async updateBedStatus(bedId: string, dto: UpdateBedStatusDto): Promise<Bed> {
-    const bed = await this.getBedById(bedId);
-    bed.status = dto.status;
-    return this.bedRepo.save(bed);
+    return this.bedRepo.manager.transaction(
+      async (transactionalEntityManager: EntityManager): Promise<Bed> => {
+        await this.acquireBedLock(transactionalEntityManager, bedId);
+
+        const bed: Bed | null = await transactionalEntityManager
+          .createQueryBuilder(Bed, 'bed')
+          .useLock('pessimistic_write')
+          .where('bed.id = :id', { id: bedId })
+          .getOne();
+
+        if (!bed) {
+          throw new NotFoundException(`Bed ${bedId} not found`);
+        }
+
+        if (dto.status === BedStatus.OCCUPIED) {
+          throw new BadRequestException(
+            'Cannot transition to OCCUPIED status via updateBedStatus; use assignBed instead',
+          );
+        }
+
+        if (bed.status === BedStatus.OCCUPIED || bed.patientId) {
+          throw new BadRequestException(
+            `Bed ${bedId} is currently occupied and must be released via releaseBed`,
+          );
+        }
+
+        const allowedTransitions = ALLOWED_BED_STATUS_TRANSITIONS[bed.status] || [];
+        if (!allowedTransitions.includes(dto.status)) {
+          throw new BadRequestException(
+            `Invalid bed status transition from ${bed.status} to ${dto.status}`,
+          );
+        }
+
+        bed.status = dto.status;
+        return transactionalEntityManager.save(Bed, bed);
+      },
+    );
   }
 
-  async getOccupancySummary(wardId?: string): Promise<Record<BedStatus, number> & { total: number }> {
-    const qb = this.bedRepo.createQueryBuilder('bed')
+  async getOccupancySummary(
+    wardId?: string,
+  ): Promise<Record<BedStatus, number> & { total: number }> {
+    const qb = this.bedRepo
+      .createQueryBuilder('bed')
       .select('bed.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .where('bed.isActive = true');

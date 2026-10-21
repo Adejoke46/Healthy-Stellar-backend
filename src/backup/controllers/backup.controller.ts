@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, UseGuards, Query, DefaultValuePipe,
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
 import { BackupService } from '../services/backup.service';
 import { DisasterRecoveryService, RecoveryOptions } from '../services/disaster-recovery.service';
 import { BackupVerificationService } from '../services/backup-verification.service';
@@ -20,19 +21,19 @@ export class BackupController {
   ) {}
 
   @Post('full')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async createFullBackup() {
     return this.backupService.createFullBackup();
   }
 
   @Post('incremental')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async createIncrementalBackup() {
     return this.backupService.createIncrementalBackup();
   }
 
   @Get('history')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getBackupHistory(
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
   ) {
@@ -40,31 +41,31 @@ export class BackupController {
   }
 
   @Get(':id')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getBackup(@Param('id') id: string) {
     return this.backupService.getBackupById(id);
   }
 
   @Post(':id/verify')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async verifyBackup(@Param('id') id: string, @Body('verifiedBy') verifiedBy: string) {
     return this.verificationService.verifyBackup(id, verifiedBy);
   }
 
   @Get('verification/status')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getVerificationStatus() {
     return this.verificationService.getVerificationStatus();
   }
 
   @Post('recovery/plan')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async createRecoveryPlan(@Body('backupId') backupId: string) {
     return this.recoveryService.createRecoveryPlan(backupId);
   }
 
   @Post('recovery/execute')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async executeRecovery(
     @Body() options: RecoveryOptions,
     @Body('performedBy') performedBy: string,
@@ -73,7 +74,7 @@ export class BackupController {
   }
 
   @Post('recovery/test')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async scheduleRecoveryTest(
     @Body('backupId') backupId: string,
     @Body('testedBy') testedBy: string,
@@ -82,7 +83,7 @@ export class BackupController {
   }
 
   @Get('recovery/tests')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getRecoveryTests(
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
   ) {
@@ -90,13 +91,13 @@ export class BackupController {
   }
 
   @Get('monitoring/health')
-  @Roles('admin', 'system_admin', 'doctor', 'nurse')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.PHYSICIAN, UserRole.NURSE)
   async getHealthMetrics() {
     return this.monitoringService.getHealthMetrics();
   }
 
   @Get('monitoring/alerts')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getRecentAlerts(
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
   ) {
@@ -104,13 +105,13 @@ export class BackupController {
   }
 
   @Get('monitoring/statistics')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async getStatistics(@Query('days') days?: number) {
     return this.monitoringService.getBackupStatistics(days ? parseInt(days as any, 10) : 30);
   }
 
   @Post('restore/:id/dry-run')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async dryRunRestore(
     @Param('id') id: string,
     @Body('requestedBy') requestedBy: string,
@@ -119,7 +120,7 @@ export class BackupController {
   }
 
   @Post('recovery/drill/trigger')
-  @Roles('admin', 'system_admin')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async triggerRestoreDrill() {
     return this.recoveryService.scheduledRestoreDrill();
   }
