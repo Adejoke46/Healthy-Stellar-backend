@@ -9,8 +9,10 @@ import {
 } from '@nestjs/common';
 import { Observable, of, firstValueFrom } from 'rxjs';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
-import { DataSource, QueryRunner, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { HttpIdempotencyEntity } from './idempotency.entity';
+import { TenantContext } from '../tenant/context/tenant.context';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const IDEMPOTENCY_HEADER = 'idempotency-key';
@@ -59,10 +61,15 @@ export class IdempotencyInterceptor implements NestInterceptor {
       throw new UnprocessableEntityException('Idempotency-Key must be 256 characters or fewer');
     }
 
-    const tenantId: string = req.headers['x-tenant-id'] ?? 'global';
-    const userId: string = (req as any).user?.id ?? 'anonymous';
+    // Principal is populated by JwtStrategy; tenant is the DB-validated one set by TenantInterceptor.
+    // Client-supplied headers are never used for namespacing. Anonymous requests are not cached.
+    const userId: string | undefined = req.medicalUser?.id;
+    const tenantId: string | undefined = TenantContext.getTenantId();
+    if (!userId || !tenantId) return next.handle();
+
     const compositeKey = `${tenantId}:${userId}:${clientKey}`;
-    const fingerprint = `${req.method}:${req.path}`;
+    const bodyHash = createHash('sha256').update(JSON.stringify(req.body ?? null)).digest('hex');
+    const fingerprint = `${req.method}:${req.path}:${bodyHash}`;
     const cutoff = new Date(Date.now() - TTL_MS);
 
     // Session-level advisory locks are bound to the connection that took them,
