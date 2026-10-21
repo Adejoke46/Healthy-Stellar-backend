@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
+import { WaitlistService } from './waitlist.service';
 import { Appointment, AppointmentStatus, AppointmentType, MedicalPriority } from '../entities/appointment.entity';
 import { DoctorAvailability } from '../entities/doctor-availability.entity';
 import { AuditService } from '../../common/audit/audit.service';
@@ -102,6 +103,7 @@ describe('AppointmentService – telemedicine security', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: configService },
         { provide: AuditService, useValue: auditService },
+        { provide: WaitlistService, useValue: { notifyNextEligible: jest.fn() } },
       ],
     }).compile();
 
@@ -403,6 +405,7 @@ describe('AppointmentService – booking conflict prevention', () => {
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: configService },
         { provide: AuditService, useValue: auditService },
+        { provide: WaitlistService, useValue: { notifyNextEligible: jest.fn() } },
       ],
     }).compile();
 

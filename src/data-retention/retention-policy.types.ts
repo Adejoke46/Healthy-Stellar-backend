@@ -22,12 +22,16 @@ export interface RetentionPolicy {
   action: RetentionAction;
   /** Number of rows processed per batch by the enforcement job. */
   batchSize?: number;
+  /** When true, nothing of this entity type may be purged, anonymised or deleted (litigation / regulatory hold). */
+  legalHold?: boolean;
 }
 
 /** Per-tenant override of one or more entity-type policies. */
 export interface TenantRetentionOverride {
   tenantId: string;
-  policies: Partial<Record<RetentionEntityType, Partial<Pick<RetentionPolicy, 'retentionDays' | 'action' | 'batchSize'>>>>;
+  policies: Partial<
+    Record<RetentionEntityType, Partial<Pick<RetentionPolicy, 'retentionDays' | 'action' | 'batchSize' | 'legalHold'>>>
+  >;
 }
 
 export const DEFAULT_BATCH_SIZE = 500;
@@ -88,6 +92,7 @@ export interface BatchOutcome {
   action: RetentionAction;
   recordCount: number;
   archivedCount: number;
+  anonymizedCount: number;
   deletedCount: number;
   dryRun: boolean;
   cutoffDate: Date;
@@ -100,6 +105,7 @@ export interface RetentionRunReport {
   batches: BatchOutcome[];
   totalRecords: number;
   totalArchived: number;
+  totalAnonymized: number;
   totalDeleted: number;
   errors: Array<{ entityType: RetentionEntityType; tenantId: string | null; message: string }>;
 }

@@ -1,8 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThanOrEqual, Repository } from 'typeorm';
+import { In, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { NotificationsService } from '../notifications/services/notifications.service';
-import { InfectionCase } from './entities/infection-case.entity';
+import { InfectionCase, InfectionStatus } from './entities/infection-case.entity';
 import { OutbreakThreshold } from './entities/outbreak-threshold.entity';
 import { OutbreakAlert, OutbreakAlertStatus } from './entities/outbreak-alert.entity';
 import { CreateOutbreakThresholdDto } from './dto/create-outbreak-threshold.dto';
@@ -12,8 +12,11 @@ export interface ThresholdEvaluationResult {
   threshold: OutbreakThreshold;
   observedCount: number;
   alertCreated: OutbreakAlert | null;
-  skippedReason?: 'below_threshold' | 'already_active';
+  skippedReason?: 'below_threshold' | 'already_active' | 'resolved_no_new_cases';
 }
+
+// Only live cases count toward an outbreak; RESOLVED and DECEASED cases do not.
+const COUNTED_CASE_STATUSES = [InfectionStatus.ACTIVE, InfectionStatus.CONFIRMED];
 
 /**
  * Configures per-pathogen/per-ward outbreak thresholds, evaluates them on a
@@ -89,10 +92,12 @@ export class OutbreakAlertsService {
   // ---- Threshold evaluation (invoked by the scheduled job) ----
 
   /**
-   * Evaluates every active threshold: counts InfectionCase rows for the
-   * threshold's pathogen+location within the trailing `windowMinutes`, and
-   * raises an alert if the count meets/exceeds the threshold AND no alert is
-   * already ACTIVE for that pathogen+location (deduplication).
+   * Evaluates every active threshold: counts ACTIVE/CONFIRMED InfectionCase rows
+   * for the threshold's pathogen+location within the trailing `windowMinutes`,
+   * and raises an alert if the count meets/exceeds the threshold AND no alert is
+   * already ACTIVE for that pathogen+location (deduplication). After a resolution,
+   * no new alert is raised until at least one new case is recorded after the
+   * resolved alert's `resolvedAt`.
    */
   async evaluateAllThresholds(): Promise<ThresholdEvaluationResult[]> {
     const thresholds = await this.thresholdRepository.find({ where: { isActive: true } });
@@ -113,6 +118,7 @@ export class OutbreakAlertsService {
       where: {
         pathogen: threshold.pathogen,
         location: threshold.location,
+        status: In(COUNTED_CASE_STATUSES),
         detectionDate: MoreThanOrEqual(windowStart),
       },
     });
@@ -131,6 +137,37 @@ export class OutbreakAlertsService {
 
     if (existingActiveAlert) {
       return { threshold, observedCount, alertCreated: null, skippedReason: 'already_active' };
+    }
+
+    // The windowed count can stay above threshold after an officer resolves an
+    // alert, so hold off until new cases are recorded after the resolution.
+    const lastResolvedAlert = await this.alertRepository.findOne({
+      where: {
+        pathogen: threshold.pathogen,
+        location: threshold.location,
+        status: OutbreakAlertStatus.RESOLVED,
+      },
+      order: { resolvedAt: 'DESC' },
+    });
+
+    if (lastResolvedAlert?.resolvedAt) {
+      const newCasesSinceResolution = await this.infectionCaseRepository.count({
+        where: {
+          pathogen: threshold.pathogen,
+          location: threshold.location,
+          status: In(COUNTED_CASE_STATUSES),
+          createdAt: MoreThan(lastResolvedAlert.resolvedAt),
+        },
+      });
+
+      if (newCasesSinceResolution === 0) {
+        return {
+          threshold,
+          observedCount,
+          alertCreated: null,
+          skippedReason: 'resolved_no_new_cases',
+        };
+      }
     }
 
     const alert = await this.alertRepository.save(

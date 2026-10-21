@@ -86,6 +86,7 @@ export class RetentionBatchProcessed implements DomainEvent {
       action: string;
       recordCount: number;
       archivedCount: number;
+      anonymizedCount: number;
       deletedCount: number;
       dryRun: boolean;
       cutoffDate: string;

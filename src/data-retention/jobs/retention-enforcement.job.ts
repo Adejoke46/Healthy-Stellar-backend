@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { FindOptionsWhere, LessThan, Like, Not, Repository } from 'typeorm';
 import { Record as MedicalRecord } from '../../records/entities/record.entity';
 import { AuditLogEntity } from '../../common/audit/audit-log.entity';
 import { EventStoreService } from '../../event-store/event-store.service';
@@ -10,6 +10,7 @@ import { ArchiveService } from '../services/archive.service';
 import { RetentionPolicyRegistryService } from '../services/retention-policy-registry.service';
 import {
   BatchOutcome,
+  RetentionAction,
   RetentionEntityType,
   RetentionPolicy,
   RetentionRecordRef,
@@ -21,9 +22,14 @@ import {
  * `appointment_logs` and `session_tokens` policies are resolvable via
  * RetentionPolicyRegistryService (including tenant overrides) but are not
  * yet backed by a repository here — wiring a new entity type only requires
- * adding a branch to `fetchExpiredBatch`/`deleteBatch` below.
+ * adding a branch to `fetchExpiredBatch`/`applyAction` below.
  */
 const ENFORCED_ENTITY_TYPES: RetentionEntityType[] = ['medical_records', 'audit_logs'];
+
+/** Prefix written to `patientId` on anonymised records (matches DataRetentionService). */
+const ANONYMIZED_PREFIX = 'ANONYMIZED_';
+/** LIKE pattern matching anonymised `patientId`s; `_` is escaped because it is a LIKE wildcard. */
+const ANONYMIZED_LIKE_PATTERN = 'ANONYMIZED\\_%';
 
 @Injectable()
 export class RetentionEnforcementJob {
@@ -57,8 +63,8 @@ export class RetentionEnforcementJob {
   /**
    * Core enforcement loop. Iterates every enforced entity type across the
    * global policy plus every tenant with a registered override, batching
-   * the expired rows and (unless dryRun) archiving + deleting each batch
-   * before emitting an observability event for it.
+   * the expired rows and (unless dryRun) applying the policy action to each
+   * batch before emitting an observability event for it.
    */
   async run(dryRun: boolean): Promise<RetentionRunReport> {
     const startedAt = new Date();
@@ -71,6 +77,7 @@ export class RetentionEnforcementJob {
       batches: [],
       totalRecords: 0,
       totalArchived: 0,
+      totalAnonymized: 0,
       totalDeleted: 0,
       errors: [],
     };
@@ -85,6 +92,7 @@ export class RetentionEnforcementJob {
             report.batches.push(outcome);
             report.totalRecords += outcome.recordCount;
             report.totalArchived += outcome.archivedCount;
+            report.totalAnonymized += outcome.anonymizedCount;
             report.totalDeleted += outcome.deletedCount;
           }
         } catch (err) {
@@ -100,7 +108,7 @@ export class RetentionEnforcementJob {
     report.finishedAt = new Date();
     this.logger.log(
       `RetentionEnforcementJob: finished run (dryRun=${dryRun}) — ` +
-        `records=${report.totalRecords}, archived=${report.totalArchived}, deleted=${report.totalDeleted}, errors=${report.errors.length}`,
+        `records=${report.totalRecords}, archived=${report.totalArchived}, anonymized=${report.totalAnonymized}, deleted=${report.totalDeleted}, errors=${report.errors.length}`,
     );
 
     return report;
@@ -109,18 +117,14 @@ export class RetentionEnforcementJob {
   /**
    * Process a single (entityType, tenantId) pair: resolve the effective
    * policy, find expired rows, and process them in batches of policy.batchSize.
-   * Returns undefined if there is nothing to report (no tenant-specific repo
-   * wired, or — for the global pass — when records are scoped per tenant only).
+   * Returns undefined if there is nothing to report (tenant-scoped pass, an
+   * active legal hold, or no expired rows).
    */
   private async processEntityTypeForTenant(
     entityType: RetentionEntityType,
     tenantId: string | null,
     dryRun: boolean,
   ): Promise<BatchOutcome | undefined> {
-    const policy = this.policyRegistry.getEffectivePolicy(entityType, tenantId);
-    const cutoff = this.policyRegistry.getCutoffDate(policy);
-    const batchSize = policy.batchSize ?? 500;
-
     // Neither Record nor AuditLogEntity carries a tenantId column today, so
     // tenant-scoped passes are skipped to avoid double-processing the same
     // global rows under every registered tenant override.
@@ -128,30 +132,44 @@ export class RetentionEnforcementJob {
       return undefined;
     }
 
+    // The global pass has to honour every tenant's rules at once, since the
+    // rows cannot be attributed to a tenant: longest retention wins, and any hold blocks the pass.
+    const policy = this.policyRegistry.getLongestPolicy(entityType);
+    if (policy.legalHold) {
+      this.logger.warn(
+        `RetentionEnforcementJob: skipping entityType=${entityType} under policy ${policy.id} — legal hold active`,
+      );
+      return undefined;
+    }
+    this.assertActionSupported(entityType, policy.action);
+
+    const cutoff = this.policyRegistry.getCutoffDate(policy);
+    const batchSize = policy.batchSize ?? 500;
+
     let recordCount = 0;
     let archivedCount = 0;
+    let anonymizedCount = 0;
     let deletedCount = 0;
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const batch = await this.fetchExpiredBatch(entityType, cutoff, batchSize);
+      const batch = await this.fetchExpiredBatch(entityType, cutoff, batchSize, policy.action);
       if (batch.length === 0) break;
 
       recordCount += batch.length;
 
       if (!dryRun) {
-        const archived = await this.archiveService.archiveBatch(entityType, policy.id, batch);
-        archivedCount += archived;
+        const applied = await this.applyAction(entityType, policy, batch);
+        archivedCount += applied.archived;
+        anonymizedCount += applied.anonymized;
+        deletedCount += applied.deleted;
 
-        const deleted = await this.deleteBatch(entityType, batch.map((r) => r.id));
-        deletedCount += deleted;
-
-        await this.emitBatchEvent(policy, entityType, tenantId, batch.length, archived, deleted, dryRun, cutoff);
+        await this.emitBatchEvent(policy, entityType, tenantId, batch.length, applied, dryRun, cutoff);
       }
 
       // In dry-run mode we still want to report what *would* happen, but we
       // must not loop forever re-fetching the same "expired" rows since
-      // nothing was deleted. A single pass is sufficient for the report.
+      // nothing was changed. A single pass is sufficient for the report.
       if (dryRun) break;
 
       // If the batch was smaller than batchSize, there's nothing left to fetch.
@@ -162,7 +180,7 @@ export class RetentionEnforcementJob {
       // Dry-run emits no mutating event, but we still surface the report via
       // the returned BatchOutcome so callers (and tests) can assert on it.
       this.logger.log(
-        `RetentionEnforcementJob: [dry-run] ${recordCount} ${entityType} record(s) would be archived+deleted under policy ${policy.id}`,
+        `RetentionEnforcementJob: [dry-run] ${recordCount} ${entityType} record(s) would be ${policy.action} under policy ${policy.id}`,
       );
     }
 
@@ -177,21 +195,40 @@ export class RetentionEnforcementJob {
       action: policy.action,
       recordCount,
       archivedCount,
+      anonymizedCount,
       deletedCount,
       dryRun,
       cutoffDate: cutoff,
     };
   }
 
+  /** Rejects policy actions that have no implementation for the entity type. */
+  private assertActionSupported(entityType: RetentionEntityType, action: RetentionAction): void {
+    if (entityType !== 'medical_records' && action !== 'archive_and_delete') {
+      throw new Error(`retention action '${action}' is not supported for entityType=${entityType}`);
+    }
+  }
+
   private async fetchExpiredBatch(
     entityType: RetentionEntityType,
     cutoff: Date,
     batchSize: number,
+    action: RetentionAction,
   ): Promise<RetentionRecordRef[]> {
     switch (entityType) {
       case 'medical_records': {
+        // Rows already anonymised or soft-deleted by a previous batch still match
+        // the cutoff, so exclude them here or the loop would refetch them forever.
+        const where: FindOptionsWhere<MedicalRecord> = { createdAt: LessThan(cutoff) };
+        if (action === 'anonymize') {
+          where.patientId = Not(Like(ANONYMIZED_LIKE_PATTERN));
+        }
+        if (action === 'soft_delete') {
+          where.isDeleted = false;
+        }
+
         const rows = await this.recordRepo.find({
-          where: { createdAt: LessThan(cutoff) },
+          where,
           take: batchSize,
           order: { createdAt: 'ASC' },
         });
@@ -220,6 +257,51 @@ export class RetentionEnforcementJob {
     }
   }
 
+  /** Applies the policy action to one batch and reports how many rows each effect touched. */
+  private async applyAction(
+    entityType: RetentionEntityType,
+    policy: RetentionPolicy,
+    batch: RetentionRecordRef[],
+  ): Promise<{ archived: number; anonymized: number; deleted: number }> {
+    const ids = batch.map((r) => r.id);
+
+    switch (policy.action) {
+      case 'anonymize': {
+        // Anonymised rows stay in place and are deliberately not copied to the
+        // archive: the archive holds the full payload, which would keep the PHI being removed.
+        const anonymized = await this.anonymizeRecords(ids);
+        return { archived: 0, anonymized, deleted: 0 };
+      }
+      case 'soft_delete': {
+        const deleted = await this.softDeleteRecords(ids);
+        return { archived: 0, anonymized: 0, deleted };
+      }
+      case 'archive_and_delete': {
+        const archived = await this.archiveService.archiveBatch(entityType, policy.id, batch);
+        const deleted = await this.deleteBatch(entityType, ids);
+        return { archived, anonymized: 0, deleted };
+      }
+    }
+  }
+
+  /** Strips identifying fields from medical records, keeping the row and its anchor (stellarTxHash). */
+  private async anonymizeRecords(ids: string[]): Promise<number> {
+    for (const id of ids) {
+      await this.recordRepo.update(id, {
+        patientId: `${ANONYMIZED_PREFIX}${id}`,
+        providerId: null,
+        description: null,
+        cid: '',
+      });
+    }
+    return ids.length;
+  }
+
+  private async softDeleteRecords(ids: string[]): Promise<number> {
+    const result = await this.recordRepo.update(ids, { isDeleted: true });
+    return result.affected ?? ids.length;
+  }
+
   private async deleteBatch(entityType: RetentionEntityType, ids: string[]): Promise<number> {
     if (ids.length === 0) return 0;
 
@@ -243,8 +325,7 @@ export class RetentionEnforcementJob {
     entityType: RetentionEntityType,
     tenantId: string | null,
     recordCount: number,
-    archivedCount: number,
-    deletedCount: number,
+    applied: { archived: number; anonymized: number; deleted: number },
     dryRun: boolean,
     cutoff: Date,
   ): Promise<void> {
@@ -258,8 +339,9 @@ export class RetentionEnforcementJob {
       tenantId,
       action: policy.action,
       recordCount,
-      archivedCount,
-      deletedCount,
+      archivedCount: applied.archived,
+      anonymizedCount: applied.anonymized,
+      deletedCount: applied.deleted,
       dryRun,
       cutoffDate: cutoff.toISOString(),
     });

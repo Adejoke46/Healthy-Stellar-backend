@@ -12,12 +12,16 @@ import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { WebhookSubscription } from '../entities/webhook-subscription.entity';
 import { AuditLogService } from '../../common/services/audit-log.service';
+import { UserRole } from '../../auth/entities/user.entity';
 import {
   CreateWebhookSubscriptionDto,
   UpdateWebhookSubscriptionDto,
 } from '../dto/webhook-subscription.dto';
 
 const DEFAULT_MAX_PER_TENANT = 25;
+
+// Event namespaces that carry PHI. Only SUPER_ADMIN may subscribe to these.
+const PHI_EVENT_PREFIXES = ['patient.', 'prescription.', 'lab.'];
 
 @Injectable()
 export class WebhookSubscriptionService {
@@ -39,6 +43,19 @@ export class WebhookSubscriptionService {
 
   private generateSecret(): string {
     return randomBytes(32).toString('hex');
+  }
+
+  assertEventsAllowedForRole(role: UserRole, events: string[]): void {
+    if (role === UserRole.SUPER_ADMIN) return;
+
+    const phiEvents = events.filter((event) =>
+      PHI_EVENT_PREFIXES.some((prefix) => event.startsWith(prefix)),
+    );
+    if (phiEvents.length > 0) {
+      throw new ForbiddenException(
+        `Role ${role} may not subscribe to PHI event types: ${phiEvents.join(', ')}`,
+      );
+    }
   }
 
   async listSubscriptions(tenantId: string): Promise<WebhookSubscription[]> {
