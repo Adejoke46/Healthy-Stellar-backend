@@ -1,10 +1,12 @@
 import {
   Injectable,
+  Inject,
   Logger,
   NotFoundException,
   BadRequestException,
   ForbiddenException,
   ConflictException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -82,6 +84,7 @@ export class AppointmentService {
     private readonly jwtService: JwtService,
     private readonly auditService: AuditService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => WaitlistService))
     private readonly waitlistService: WaitlistService,
   ) {}
 
@@ -112,7 +115,10 @@ export class AppointmentService {
     return scopedWhere;
   }
 
-  async create(createAppointmentDto: CreateAppointmentDto): Promise<Appointment> {
+  async create(
+    createAppointmentDto: CreateAppointmentDto,
+    transactionManager?: EntityManager,
+  ): Promise<Appointment> {
     const tenantId = TenantContext.getTenantId();
     if (!tenantId) {
       throw new ForbiddenException('Tenant context missing');
@@ -162,8 +168,9 @@ export class AppointmentService {
     //     in depth so that, on engines without advisory locks, AFTER the
     //     transaction starts we still serialise updates of any existing
     //     matching rows.
-    await this.appointmentRepository.manager.transaction(
-      async (transactionalEntityManager) => {
+    const createWithinTransaction = async (
+      transactionalEntityManager: EntityManager,
+    ): Promise<Appointment> => {
         await this.acquireBookingLocks(
           transactionalEntityManager,
           providerLockKey,
@@ -266,8 +273,11 @@ export class AppointmentService {
           });
 
         return saved;
-      },
-    );
+      };
+
+    return transactionManager
+      ? createWithinTransaction(transactionManager)
+      : this.appointmentRepository.manager.transaction(createWithinTransaction);
   }
 
   /**

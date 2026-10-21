@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { WaitlistService } from './waitlist.service';
 import { AppointmentWaitlist, WaitlistStatus } from '../entities/appointment-waitlist.entity';
 import { Appointment, AppointmentStatus, AppointmentType, MedicalPriority } from '../entities/appointment.entity';
+import { AppointmentService } from './appointment.service';
 
 const mockRepo = () => ({
   create: jest.fn(),
   save: jest.fn(),
   find: jest.fn(),
   findOne: jest.fn(),
+  manager: { transaction: jest.fn() },
 });
 
 const makeAppointment = (overrides: Partial<Appointment> = {}): Appointment =>
@@ -29,19 +31,29 @@ describe('WaitlistService', () => {
   let service: WaitlistService;
   let repo: ReturnType<typeof mockRepo>;
   let appointmentRepo: ReturnType<typeof mockRepo>;
+  let appointmentService: { create: jest.Mock };
 
   beforeEach(async () => {
+    appointmentService = { create: jest.fn() };
+    const transactionManager = {
+      getRepository: jest.fn((entity) =>
+        entity === AppointmentWaitlist ? repo : appointmentRepo,
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WaitlistService,
         { provide: getRepositoryToken(AppointmentWaitlist), useFactory: mockRepo },
         { provide: getRepositoryToken(Appointment), useFactory: mockRepo },
+        { provide: AppointmentService, useValue: appointmentService },
       ],
     }).compile();
 
     service = module.get(WaitlistService);
     repo = module.get(getRepositoryToken(AppointmentWaitlist));
     appointmentRepo = module.get(getRepositoryToken(Appointment));
+    repo.manager.transaction.mockImplementation((callback) => callback(transactionManager));
   });
 
   describe('join', () => {
@@ -167,20 +179,45 @@ describe('WaitlistService', () => {
       repo.save.mockImplementation(async (entity) => entity);
 
       appointmentRepo.findOne.mockResolvedValue(cancelledAppointment);
-      appointmentRepo.create.mockImplementation((dto) => ({ id: 'new-appt-1', ...dto }));
-      appointmentRepo.save.mockImplementation(async (entity) => entity);
+      appointmentService.create.mockResolvedValue({ id: 'new-appt-1' });
 
       const result = await service.acceptOffer('patient-1', 'wl-1');
 
       expect(result.status).toBe(WaitlistStatus.ACCEPTED);
-      expect(appointmentRepo.create).toHaveBeenCalledWith(
+      expect(appointmentService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           patientId: 'patient-1',
           doctorId: 'doc-1',
-          status: AppointmentStatus.SCHEDULED,
         }),
+        expect.any(Object),
       );
-      expect(appointmentRepo.save).toHaveBeenCalled();
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: WaitlistStatus.ACCEPTED }),
+      );
+    });
+
+    it('leaves the offer notified when the offered slot is no longer available', async () => {
+      const waitlistEntry: Partial<AppointmentWaitlist> = {
+        id: 'wl-1',
+        patientId: 'patient-1',
+        doctorId: 'doc-1',
+        status: WaitlistStatus.NOTIFIED,
+        offeredAppointmentId: 'appt-cancelled-1',
+        notifiedAt: new Date(),
+        responseWindowMinutes: 30,
+        preferredDateStart: new Date('2026-08-10T09:00:00Z'),
+      };
+
+      repo.findOne.mockResolvedValue(waitlistEntry);
+      appointmentRepo.findOne.mockResolvedValue(makeAppointment());
+      appointmentService.create.mockRejectedValue(
+        new ConflictException('Time slot conflicts with an existing appointment.'),
+      );
+
+      await expect(service.acceptOffer('patient-1', 'wl-1')).rejects.toThrow(ConflictException);
+
+      expect(waitlistEntry.status).toBe(WaitlistStatus.NOTIFIED);
+      expect(repo.save).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundException when no active notified offer exists', async () => {

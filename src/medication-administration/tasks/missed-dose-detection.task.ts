@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, EntityManager, Repository } from 'typeorm';
 import {
   AdministrationStatus,
   MedicationAdministrationRecord,
@@ -39,9 +39,44 @@ export class MissedDoseDetectionTask {
     this.logger.warn(`${overdue.length} dose(s) past the 30-minute grace period; flagging as missed`);
 
     for (const mar of overdue) {
-      mar.status = AdministrationStatus.MISSED;
-      await this.marRepository.save(mar);
-      await this.missedDoseService.createMissedDose(mar, 'system', 'Automated grace-period detection');
+      await this.marRepository.manager.transaction(async (manager) => {
+        const transition = await this.transitionToMissed(manager, mar.id, graceCutoff);
+        if (!transition) return;
+
+        const transitionedMar = await manager.findOne(MedicationAdministrationRecord, {
+          where: { id: mar.id },
+        });
+        if (!transitionedMar) {
+          throw new Error(`MAR ${mar.id} was transitioned to missed but could not be reloaded`);
+        }
+
+        await this.missedDoseService.createMissedDoseWithManager(
+          manager,
+          transitionedMar,
+          'system',
+          'Automated grace-period detection',
+        );
+      });
     }
+  }
+
+  private async transitionToMissed(
+    manager: EntityManager,
+    marId: string,
+    graceCutoff: Date,
+  ): Promise<boolean> {
+    const result = await manager
+      .createQueryBuilder()
+      .update(MedicationAdministrationRecord)
+      .set({ status: AdministrationStatus.MISSED })
+      .where('id = :id AND status = :scheduled AND scheduled_time <= :graceCutoff', {
+        id: marId,
+        scheduled: AdministrationStatus.SCHEDULED,
+        graceCutoff,
+      })
+      .returning('*')
+      .execute();
+
+    return (result.raw?.length ?? 0) > 0;
   }
 }

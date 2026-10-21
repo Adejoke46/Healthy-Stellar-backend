@@ -4,13 +4,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DeviceToken, DevicePlatform } from '../entities/device-token.entity';
 
+export const PUSH_DELIVERY_SERVICE = 'PUSH_DELIVERY_SERVICE';
+
 export interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, string>;
 }
 
-interface PushSendResult {
+export interface PushSendResult {
   success: boolean;
   invalidToken?: boolean;
   error?: string;
@@ -63,6 +65,15 @@ export class PushNotificationService {
   async sendToUser(userId: string, payload: PushPayload): Promise<void> {
     const tokens = await this.deviceTokenRepo.find({ where: { userId, active: true } });
     if (tokens.length === 0) return;
+
+    await Promise.all(tokens.map((dt) => this.deliverWithCleanup(dt, payload)));
+  }
+
+  async sendToRegisteredDevices(userId: string, payload: PushPayload): Promise<void> {
+    const tokens = await this.deviceTokenRepo.find({ where: { userId, active: true } });
+    if (tokens.length === 0) {
+      throw new ServiceUnavailableException(`No active push devices registered for ${userId}`);
+    }
 
     await Promise.all(tokens.map((dt) => this.deliverWithCleanup(dt, payload)));
   }

@@ -34,6 +34,7 @@ export enum FollowUpStatus {
 @Entity('missed_doses')
 @Index(['patientId', 'missedDate'])
 @Index(['followUpStatus'])
+@Index('UQ_missed_doses_mar_id', ['marId'], { unique: true })
 export class MissedDose extends BaseAuditEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
