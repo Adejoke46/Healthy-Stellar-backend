@@ -8,17 +8,19 @@ import {
   DefaultValuePipe,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { AnalyticsService } from './analytics.service';
 import { ActivityQueryDto } from './dto/activity-query.dto';
 import { AnalyticsCacheInterceptor } from './interceptors/analytics-cache.interceptor';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('Admin Analytics')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles(UserRole.ADMIN)
 @UseInterceptors(AnalyticsCacheInterceptor)
 @Controller('admin/analytics')
 export class AnalyticsController {

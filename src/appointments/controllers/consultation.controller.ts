@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Patch, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { ConsultationService } from '../services/consultation.service';
 import { CreateConsultationNoteDto } from '../dto/create-consultation-note.dto';
 import { ConsultationOutcome } from '../entities/consultation-note.entity';
@@ -9,7 +10,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../users/entities/user.entity';
 
 @ApiTags('Consultations')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('consultations')
 export class ConsultationController {

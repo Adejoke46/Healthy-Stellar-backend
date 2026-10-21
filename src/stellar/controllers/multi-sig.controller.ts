@@ -16,9 +16,10 @@ import {
   ApproveRejectDto,
   MultiSigTransactionResponse,
 } from '../interfaces/multi-sig.interface';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 
 @ApiTags('Stellar – Multi-Signature Payments')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('stellar/multi-sig')
 export class MultiSigController {
   constructor(

@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Throttle } from '@nestjs/throttler';
 import { TenantBrandingService } from '../services/tenant-branding.service';
 import { UpdateTenantBrandingDto } from '../dto/update-tenant-branding.dto';
@@ -24,7 +25,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('admin/tenants')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('admin/tenants')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)

@@ -14,6 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Response } from 'express';
 import { ReportingService } from '../services/reporting.service';
 import { ReportGenerationService } from '../services/report-generation.service';
@@ -32,7 +33,7 @@ const PRIVILEGED_REPORT_ROLES = [
 ];
 
 @ApiTags('Reporting')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('reports')
 export class ReportingController {

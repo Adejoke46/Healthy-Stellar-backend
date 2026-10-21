@@ -13,6 +13,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { LabTestsService } from '../services/lab-tests.service';
 import { CreateLabTestDto } from '../dto/create-lab-test.dto';
 import { TestStatus } from '../entities/lab-test.entity';
@@ -20,7 +21,7 @@ import { TestStatus } from '../entities/lab-test.entity';
 @ApiTags('Laboratory - Tests')
 @Controller('laboratory/tests')
 // @UseGuards(JwtAuthGuard, RolesGuard) // Uncomment when auth is ready
-// @ApiBearerAuth()
+// @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class LabTestsController {
   constructor(private readonly labTestsService: LabTestsService) {}
 

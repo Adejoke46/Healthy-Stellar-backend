@@ -16,6 +16,7 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { IsOptional, IsString, Matches } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -62,7 +63,7 @@ export class RotationResultDto implements RotationResult {
  *   GET  /admin/tenants/:id/kek-status   – audit view (counts per kek_version)
  */
 @ApiTags('Admin – Key Management')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller('admin/tenants')

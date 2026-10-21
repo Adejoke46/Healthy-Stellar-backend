@@ -15,6 +15,7 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -24,7 +25,7 @@ import { CreateDisputeDto } from '../dto/create-dispute.dto';
 import { UpdateDisputeDto } from '../dto/update-dispute.dto';
 
 @ApiTags('billing/disputes')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('billing/disputes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)

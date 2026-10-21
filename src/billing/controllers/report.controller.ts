@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -16,7 +17,7 @@ import { UserRole } from '../../auth/entities/user.entity';
 import { ReportService } from '../services/report.service';
 
 @ApiTags('Financial Reporting & Analytics')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF, UserRole.COMPLIANCE_OFFICER)
 @Controller('financial-reports')

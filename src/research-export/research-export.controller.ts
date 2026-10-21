@@ -1,9 +1,11 @@
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { Response } from 'express';
 import { CurrentMedicalUser, RequirePermissions } from '../roles/medical-rbac.decorator';
 import { MedicalPermission } from '../roles/medical-roles.enum';
 import { MedicalRbacGuard } from '../roles/medical-rbac.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MedicalUser } from '../interfaces/medical-rbac.interface';
 import { AuditService } from '../common/audit/audit.service';
 import { ResearchExportService } from './research-export.service';
@@ -12,7 +14,7 @@ import { AnonymizedExportFilterDto } from './dto/research-export.dto';
 
 @ApiTags('Research Export')
 @Controller('research-export')
-@UseGuards(MedicalRbacGuard)
+@UseGuards(JwtAuthGuard, MedicalRbacGuard)
 export class ResearchExportController {
   constructor(
     private readonly researchExportService: ResearchExportService,
@@ -22,7 +24,7 @@ export class ResearchExportController {
 
   @Post('anonymized')
   @RequirePermissions(MedicalPermission.RESEARCH_EXPORT)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({
     summary: 'Stream a k-anonymized research dataset as NDJSON',
     description:

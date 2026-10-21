@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -10,7 +11,7 @@ import { ProjectionRebuildService, RebuildStatus } from '../services/projection-
 @Controller('admin/projections')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class ProjectionsAdminController {
   constructor(private readonly rebuildService: ProjectionRebuildService) {}
 

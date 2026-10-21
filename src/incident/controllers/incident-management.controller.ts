@@ -15,6 +15,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { IncidentManagementService } from '../services/incident-management.service';
@@ -27,7 +28,7 @@ import {
 } from '../dto/incident-management.dto';
 
 @ApiTags('incidents')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('incidents')
 export class IncidentManagementController {

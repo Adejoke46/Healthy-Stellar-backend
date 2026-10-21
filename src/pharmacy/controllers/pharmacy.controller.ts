@@ -12,6 +12,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { CreateDrugDto, FillPrescriptionDto } from '../dto/pharmacy.dto';
 import { CreatePrescriptionDto } from '../dto/create-prescription.dto';
 import { DispensePrescriptionRequestDto } from '../dto/dispense-prescription-request.dto';
@@ -23,7 +24,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('Pharmacy Management')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('pharmacy')
 export class PharmacyController {

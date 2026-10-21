@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { TransferService } from '../services/transfer.service';
 import { CreateTransferDto } from '../dto/create-transfer.dto';
 import { AcceptTransferDto } from '../dto/accept-transfer.dto';
@@ -18,7 +19,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 
 @ApiTags('Hospital Registry - Transfers')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('hospital-registry/transfers')
 export class TransferController {

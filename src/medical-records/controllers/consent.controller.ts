@@ -11,6 +11,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { ConsentService } from '../services/consent.service';
 import { MedicalRecordsService } from '../services/medical-records.service';
 import { CreateConsentDto } from '../dto/create-consent.dto';
@@ -21,7 +22,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('Consent Management')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('consents')
 export class ConsentController {

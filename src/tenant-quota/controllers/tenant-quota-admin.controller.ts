@@ -16,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 
 import {
   TenantNearLimitDto,
@@ -31,7 +32,7 @@ import { AdminGuard } from '../../auth/guards/admin.guard';
  * Requires a JWT and the admin role.
  */
 @ApiTags('Admin – Tenant Quotas')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('admin/tenants')
 export class TenantQuotaAdminController {

@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { AccessRequestService } from '../services/access-request.service';
 import { CreateAccessRequestDto } from '../dto/create-access-request.dto';
@@ -27,7 +28,7 @@ import { UserRole } from '../../auth/entities/user.entity';
 import { JwtPayload } from '../../auth/services/auth-token.service';
 
 @ApiTags('Access Requests')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('access')
 export class AccessRequestController {

@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GraphqlPubSubService } from '../../pubsub/services/graphql-pubsub.service';
 import {
@@ -9,8 +9,14 @@ import { NotificationPreferencesService } from './notification-preferences.servi
 import { NotificationTemplateService } from './notification-template.service';
 import { NotificationPreferenceCenterService } from './notification-preference-center.service';
 import { NotificationChannel } from '../entities/notification-category-preference.entity';
+import { PushNotificationService } from './push-notification.service';
 
 export const MAILER_SERVICE = 'MAILER_SERVICE';
+export const SMS_DELIVERY_SERVICE = 'SMS_DELIVERY_SERVICE';
+
+export interface SmsDeliveryService {
+  sendSms(to: string, message: string): Promise<void>;
+}
 
 @Injectable()
 export class NotificationsService {
@@ -24,6 +30,9 @@ export class NotificationsService {
     private readonly templateService: NotificationTemplateService,
     @Optional() @Inject(MAILER_SERVICE) private readonly mailerService?: any,
     @Optional() private readonly preferenceCenter?: NotificationPreferenceCenterService,
+    @Optional() @Inject(SMS_DELIVERY_SERVICE)
+    private readonly smsDeliveryService?: SmsDeliveryService,
+    @Optional() private readonly pushNotificationService?: PushNotificationService,
   ) {
     this.emailEnabled =
       this.configService.get<string>('ENABLE_EMAIL_NOTIFICATIONS', 'false') === 'true';
@@ -219,6 +228,30 @@ export class NotificationsService {
       return;
     }
     await this.mailerService.sendMail({ to, subject, template, context });
+  }
+
+  async sendReminderEmail(to: string, subject: string, message: string): Promise<void> {
+    if (!this.emailEnabled || !this.mailerService) {
+      throw new ServiceUnavailableException('Appointment reminder email delivery is not configured');
+    }
+    await this.mailerService.sendMail({ to, subject, text: message });
+  }
+
+  async sendReminderSms(to: string, message: string): Promise<void> {
+    if (!this.smsDeliveryService) {
+      throw new ServiceUnavailableException('SMS delivery provider is not configured');
+    }
+    await this.smsDeliveryService.sendSms(to, message);
+  }
+
+  async sendReminderPush(recipient: string, title: string, message: string): Promise<void> {
+    if (!this.pushNotificationService) {
+      throw new ServiceUnavailableException('Push notification delivery is not configured');
+    }
+    await this.pushNotificationService.sendToRegisteredDevices(recipient, {
+      title,
+      body: message,
+    });
   }
 
   private emitEvent(event: NotificationEvent): void {

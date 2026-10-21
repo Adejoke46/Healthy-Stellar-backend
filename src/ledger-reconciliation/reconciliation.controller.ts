@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Query, DefaultValuePipe, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { LedgerReconciliationService } from './ledger-reconciliation.service';
 import { StellarBalanceReconciliationService } from './stellar-balance-reconciliation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -7,7 +8,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 @ApiTags('admin/reconciliation')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 @Controller('admin/reconciliation')

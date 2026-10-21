@@ -63,7 +63,24 @@ export class RetentionPolicyRegistryService {
       retentionDays: override.retentionDays ?? base.retentionDays,
       action: override.action ?? base.action,
       batchSize: override.batchSize ?? base.batchSize,
+      legalHold: override.legalHold ?? base.legalHold,
     };
+  }
+
+  /**
+   * Resolve the policy the global (untenanted) pass must enforce when rows
+   * carry no tenantId. That pass has to satisfy every tenant at once, so the
+   * policy with the longest retention across the global default and all
+   * overrides wins, and a legal hold on any of them holds the whole entity type.
+   */
+  getLongestPolicy(entityType: RetentionEntityType): RetentionPolicy {
+    const candidates = [
+      DEFAULT_ENTITY_POLICIES[entityType],
+      ...this.getOverriddenTenantIds().map((tenantId) => this.getEffectivePolicy(entityType, tenantId)),
+    ];
+    const longest = candidates.reduce((a, b) => (b.retentionDays > a.retentionDays ? b : a));
+
+    return { ...longest, legalHold: candidates.some((p) => p.legalHold) };
   }
 
   /** Compute the cutoff date (records created before this are expired) for a policy. */

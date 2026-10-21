@@ -1,5 +1,6 @@
-import { Controller, Post, Body, HttpCode, Inject, Logger, Get, Param, UseGuards, Req, Query, Delete, NotFoundException, Put, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, Inject, Logger, Get, Param, UseGuards, Req, Query, Delete, NotFoundException, ForbiddenException, Put, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import { IpfsService } from '../stellar/services/ipfs.service';
 import { QueueService } from '../queues/queue.service';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +9,7 @@ import { WebhookSubscriptionService } from './services/webhook-subscription.serv
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../auth/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateWebhookSubscriptionDto, UpdateWebhookSubscriptionDto } from './dto/webhook-subscription.dto';
 import { Repository } from 'typeorm';
@@ -35,7 +37,7 @@ export class WebhooksController {
 
   @Get('subscriptions')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'List webhook subscriptions for the authenticated tenant' })
   async listSubscriptions(@Req() req: any) {
     const tenantId = req.user?.tenantId ?? req.user?.organizationId;
@@ -44,18 +46,19 @@ export class WebhooksController {
 
   @Post('subscriptions')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Create a new webhook subscription (includes validation ping)' })
   @ApiBody({ type: CreateWebhookSubscriptionDto })
   async createSubscription(@Req() req: any, @Body() dto: CreateWebhookSubscriptionDto) {
     const tenantId = req.user?.tenantId ?? req.user?.organizationId;
     const userId = req.user?.id;
+    this.subscriptionService.assertEventsAllowedForRole(req.user?.role, dto.events);
     return this.subscriptionService.createSubscription(tenantId, userId, dto);
   }
 
   @Put('subscriptions/:id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Update a webhook subscription' })
   @ApiParam({ name: 'id', type: String })
   @ApiBody({ type: UpdateWebhookSubscriptionDto })
@@ -66,12 +69,15 @@ export class WebhooksController {
   ) {
     const tenantId = req.user?.tenantId ?? req.user?.organizationId;
     const userId = req.user?.id;
+    if (dto.events !== undefined) {
+      this.subscriptionService.assertEventsAllowedForRole(req.user?.role, dto.events);
+    }
     return this.subscriptionService.updateSubscription(tenantId, id, userId, dto);
   }
 
   @Delete('subscriptions/:id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Delete a webhook subscription' })
   @ApiParam({ name: 'id', type: String })
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -83,7 +89,7 @@ export class WebhooksController {
 
   @Post('subscriptions/:id/rotate-secret')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Rotate the HMAC signing secret for a webhook subscription' })
   @ApiParam({ name: 'id', type: String })
   @HttpCode(HttpStatus.OK)
@@ -170,22 +176,38 @@ export class WebhooksController {
 
   // ── Admin: Deliveries Management ──────────────────────────────────────────
 
+  private tenantIdOf(req: any): string {
+    const tenantId = req.user?.tenantId ?? req.user?.organizationId;
+    if (!tenantId) {
+      throw new ForbiddenException('Tenant context required');
+    }
+    return tenantId;
+  }
+
+  private async assertTenantDelivery(deliveryId: string, tenantId: string): Promise<void> {
+    const exists = await this.deliveryRepository.exist({ where: { id: deliveryId, tenantId } });
+    if (!exists) {
+      throw new NotFoundException(`Webhook delivery ${deliveryId} not found`);
+    }
+  }
+
   @Get('deliveries')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'List webhook deliveries, optionally filtered by status' })
   @ApiQuery({ name: 'status', required: false, enum: WebhookDeliveryStatus })
   @ApiQuery({ name: 'subscriptionId', required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   async listDeliveries(
+    @Req() req: any,
     @Query('status') status?: WebhookDeliveryStatus,
     @Query('subscriptionId') subscriptionId?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const where: any = {};
+    const where: any = { tenantId: this.tenantIdOf(req) };
     if (status) where.status = status;
     if (subscriptionId) where.subscriptionId = subscriptionId;
 
@@ -203,12 +225,12 @@ export class WebhooksController {
   @Get(':id/deliveries')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Get the delivery attempt history for a webhook delivery' })
   @ApiParam({ name: 'id', type: String })
-  async getDeliveryHistory(@Param('id') id: string) {
+  async getDeliveryHistory(@Req() req: any, @Param('id') id: string) {
     const delivery = await this.deliveryRepository.findOne({
-      where: { id },
+      where: { id, tenantId: this.tenantIdOf(req) },
       relations: ['subscription'],
     });
 
@@ -222,12 +244,13 @@ export class WebhooksController {
   @Post('deliveries/:id/replay')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Manually replay a failed webhook delivery (signature re-computed)' })
   @ApiParam({ name: 'id', type: String })
   @HttpCode(200)
   async replayDelivery(@Param('id') id: string, @Req() req: any) {
     const userId = req.user?.id || 'unknown';
+    await this.assertTenantDelivery(id, this.tenantIdOf(req));
     await this.webhookService.replayDelivery(id, userId);
     return { success: true, message: 'Webhook delivery queued for replay' };
   }
@@ -237,19 +260,20 @@ export class WebhooksController {
   @Get('dead-letter')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'List failed webhook deliveries (dead-letter queue)' })
   @ApiQuery({ name: 'status', required: false, enum: WebhookDeliveryStatus })
   @ApiQuery({ name: 'subscriptionId', required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   async getDeadLetterQueue(
+    @Req() req: any,
     @Query('status') status?: WebhookDeliveryStatus,
     @Query('subscriptionId') subscriptionId?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const where: any = {};
+    const where: any = { tenantId: this.tenantIdOf(req) };
     if (status) where.status = status;
     if (subscriptionId) where.subscriptionId = subscriptionId;
 
@@ -267,12 +291,12 @@ export class WebhooksController {
   @Get('dead-letter/:deliveryId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Get details of a failed webhook delivery' })
   @ApiParam({ name: 'deliveryId', type: String })
-  async getDeadLetterItem(@Param('deliveryId') deliveryId: string) {
+  async getDeadLetterItem(@Req() req: any, @Param('deliveryId') deliveryId: string) {
     return this.deliveryRepository.findOne({
-      where: { id: deliveryId },
+      where: { id: deliveryId, tenantId: this.tenantIdOf(req) },
       relations: ['subscription'],
     });
   }
@@ -280,7 +304,7 @@ export class WebhooksController {
   @Post('dead-letter/:deliveryId/replay')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Replay a failed webhook delivery from dead-letter queue' })
   @ApiParam({ name: 'deliveryId', type: String })
   @HttpCode(200)
@@ -289,6 +313,7 @@ export class WebhooksController {
     @Req() req: any,
   ) {
     const userId = req.user?.id || 'unknown';
+    await this.assertTenantDelivery(deliveryId, this.tenantIdOf(req));
     await this.webhookService.replayDelivery(deliveryId, userId);
     return { success: true, message: 'Webhook delivery queued for replay' };
   }
@@ -296,15 +321,16 @@ export class WebhooksController {
   @Delete('dead-letter/:deliveryId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Discard a failed webhook delivery' })
   @ApiParam({ name: 'deliveryId', type: String })
   @HttpCode(200)
   async discardDeadLetterItem(
+    @Req() req: any,
     @Param('deliveryId') deliveryId: string,
   ) {
     const delivery = await this.deliveryRepository.findOne({
-      where: { id: deliveryId },
+      where: { id: deliveryId, tenantId: this.tenantIdOf(req) },
     });
 
     if (!delivery) {

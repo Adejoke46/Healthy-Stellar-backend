@@ -10,6 +10,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { LabOrdersService } from '../services/lab-orders.service';
 import { CreateLabOrderDto } from '../dto/create-lab-order.dto';
 import { UpdateLabOrderDto } from '../dto/update-lab-order.dto';
@@ -18,7 +19,7 @@ import { SearchLabOrdersDto } from '../dto/search-lab-orders.dto';
 @ApiTags('Laboratory - Orders')
 @Controller('laboratory/orders')
 // @UseGuards(JwtAuthGuard, RolesGuard)
-// @ApiBearerAuth()
+// @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class LabOrdersController {
   constructor(private readonly labOrdersService: LabOrdersService) {}
 

@@ -1,5 +1,6 @@
 import { Controller, Get, UseGuards, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../common/constants/swagger.constants';
 import {
   HealthCheck,
   HealthCheckService,
@@ -32,10 +33,16 @@ interface DependencyCheck {
   check: () => Promise<HealthCheckResult>;
 }
 
+const DATA_RESIDENCY_CACHE_TTL_MS = 30_000;
+
 @ApiTags('health')
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
-@Public()
 export class HealthController {
+  private dataResidencyCache?: {
+    expiresAt: number;
+    result: ReturnType<HealthController['probeDataResidency']>;
+  };
+
   private readonly dependencies: DependencyCheck[] = [
     {
       name: 'database',
@@ -79,6 +86,7 @@ export class HealthController {
   ) {}
 
   @Get()
+  @Public()
   @HealthCheck()
   @ApiOperation({ summary: 'Overall system health (liveness probe)' })
   @ApiResponse({ status: 200, description: 'System is alive' })
@@ -87,6 +95,7 @@ export class HealthController {
   }
 
   @Get('ready')
+  @Public()
   @HealthCheck()
   @ApiOperation({ summary: 'Readiness probe with dependency degradation modes' })
   @ApiResponse({ status: 200, description: 'System is ready (critical dependencies healthy)' })
@@ -135,13 +144,12 @@ export class HealthController {
       status: 'up',
       details: results,
       degradedServices,
-      circuitBreakers: this.circuitBreaker.getAllStates(),
     };
   }
 
   @Get('detailed')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth(API_BEARER_AUTH_SCHEME)
   @ApiOperation({ summary: 'Detailed admin health diagnostics' })
   @ApiResponse({ status: 200, description: 'Detailed health report' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -151,8 +159,12 @@ export class HealthController {
   }
 
   @Get('circuit-breakers')
-  @ApiOperation({ summary: 'Get circuit breaker states' })
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get circuit breaker states (admin only)' })
   @ApiResponse({ status: 200, description: 'Circuit breaker states retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden – admin only' })
   getCircuitBreakerStates() {
     return {
       states: this.circuitBreaker.getAllStates(),
@@ -161,9 +173,29 @@ export class HealthController {
   }
 
   @Get('data-residency')
-  @ApiOperation({ summary: 'Regional database and IPFS node connectivity' })
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Regional database and IPFS node connectivity (admin only)' })
   @ApiResponse({ status: 200, description: 'Per-region health status' })
-  async checkDataResidency() {
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden – admin only' })
+  checkDataResidency() {
+    const now = Date.now();
+
+    if (!this.dataResidencyCache || this.dataResidencyCache.expiresAt <= now) {
+      const result = this.probeDataResidency();
+      this.dataResidencyCache = { expiresAt: now + DATA_RESIDENCY_CACHE_TTL_MS, result };
+      result.catch(() => {
+        if (this.dataResidencyCache?.result === result) {
+          this.dataResidencyCache = undefined;
+        }
+      });
+    }
+
+    return this.dataResidencyCache.result;
+  }
+
+  private async probeDataResidency() {
     const regions = Object.values(DataResidencyRegion);
 
     const [dbHealth, ipfsHealth] = await Promise.all([
@@ -186,6 +218,7 @@ export class HealthController {
   }
 
   @Get('synthetic')
+  @Public()
   @HealthCheck()
   @ApiOperation({ summary: 'Synthetic probes for critical user journeys' })
   @ApiResponse({ status: 200, description: 'Business-level availability validated' })

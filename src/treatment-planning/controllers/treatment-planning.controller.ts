@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { TreatmentPlanService } from '../services/treatment-plan.service';
 import { MedicalProcedureService } from '../services/medical-procedure.service';
 import { CarePlanTemplateService } from '../services/care-plan-template.service';
@@ -31,7 +32,7 @@ import {
 } from '../dto/treatment-planning.dto';
 
 @ApiTags('Treatment Plans')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('treatment-plans')
 export class TreatmentPlanController {
@@ -117,7 +118,7 @@ export class TreatmentPlanController {
 }
 
 @ApiTags('Medical Procedures')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('procedures')
 export class MedicalProcedureController {
@@ -199,7 +200,7 @@ export class MedicalProcedureController {
 }
 
 @ApiTags('Care Plan Templates')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard)
 @Controller('care-templates')
 export class CarePlanTemplateController {

@@ -7,10 +7,10 @@ NestJS backend for a decentralized healthcare system built on Stellar Soroban sm
 - [Project Structure](#project-structure)
 - [Local Development with Docker](#local-development-with-docker)
 - [Background Worker Process](#background-worker-process)
-- [Installation & Setup](#installation--setup)
+- [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Scripts Reference](#scripts-reference)
-- [Core Modules](#core-modules)
+- [Security Headers](#security-headers)
 - [API Endpoints](#api-endpoints)
 - [Webhooks](#webhooks)
 - [Postman Collection](#postman-collection)
@@ -223,8 +223,20 @@ If you run the NestJS API locally using `npm run start:dev`, you **MUST** also s
 npm run start:worker:dev
 ```
 
-The application will be available at `http://localhost:3000`
-Swagger documentation will be available at `http://localhost:3000/api`
+The application will be available at `http://localhost:3000`.
+Swagger documentation will be available at `http://localhost:3000/api`.
+
+## Getting Started
+
+**Prerequisites:** Node.js v18+ and PostgreSQL v12+.
+
+1. Install dependencies with `npm install`.
+2. Copy `.env.example` to `.env` and configure the required values.
+3. Run database migrations with `npm run migration:run`.
+4. Start the API with `npm run start:dev`.
+5. In a separate terminal, start the background worker with `npm run start:worker:dev`.
+
+Run `npm run seed` only when you want to populate a development database with sample data.
 
 ## Scripts Reference
 
@@ -499,27 +511,16 @@ All non-FHIR errors return a consistent envelope (`statusCode`, `error`, `messag
 
 See [`docs/errors.md`](docs/errors.md) for the full error-code catalog (HTTP status, meaning, and retryability for every code), the exception-filter order, sanitization rules, and how `traceId` maps to logs and tracing for support requests.
 
+## Testing
+
 See **[docs/scripts.md](docs/scripts.md)** for the full list of test scripts and their prerequisites.
 
-### Quick reference
-
 ```bash
-npm run test        # unit
-npm run test:e2e    # e2e
-npm run test:cov    # coverage
-```
-
-# Unit tests with coverage
-npm run test:cov
-
-# E2E tests (requires Docker — starts a PostgreSQL container)
-npm run test:e2e
-
-# Full coverage (unit + e2e)
-npm run test:all:cov
-
-# HIPAA/GDPR compliance tests
-npm run test:compliance
+npm run test          # Unit tests
+npm run test:e2e      # End-to-end tests (requires Docker)
+npm run test:cov      # Unit-test coverage
+npm run test:all:cov  # Unit and end-to-end coverage
+npm run test:compliance  # HIPAA/GDPR compliance tests
 ```
 
 ## Deployment

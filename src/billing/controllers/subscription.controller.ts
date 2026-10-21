@@ -14,6 +14,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -33,7 +34,7 @@ import {
 const BILLING_ROLES = [UserRole.ADMIN, UserRole.BILLING_STAFF];
 
 @ApiTags('Billing Subscriptions')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard, RolesGuard, TenantGuard)
 @Roles(...BILLING_ROLES)

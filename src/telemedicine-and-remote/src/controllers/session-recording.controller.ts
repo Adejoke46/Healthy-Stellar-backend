@@ -15,13 +15,14 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../../common/constants/swagger.constants';
 import { SessionRecordingService } from '../services/session-recording.service';
 import { MedicalRoles } from '../../../roles/medical-rbac.decorator';
 import { MedicalRole } from '../../../roles/medical-roles.enum';
 import { MedicalRbacGuard } from '../../../roles/medical-rbac.guard';
 
 @ApiTags('Telemedicine Recordings')
-@ApiBearerAuth('medical-auth')
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('telemedicine/sessions')
 export class SessionRecordingController {
   constructor(private readonly sessionRecordingService: SessionRecordingService) {}

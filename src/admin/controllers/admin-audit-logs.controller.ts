@@ -5,6 +5,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -20,7 +21,7 @@ import {
 @Controller('admin/audit-logs')
 @UseGuards(IpAllowlistGuard, JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class AdminAuditLogsController {
   constructor(private readonly auditLogService: AuditLogService) {}
 

@@ -6,6 +6,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -20,7 +21,7 @@ import { IpAllowlistGuard } from '../../common/guards/ip-allowlist.guard';
 @Controller('admin/patients')
 @UseGuards(IpAllowlistGuard, JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 export class AdminPatientsController {
   constructor(private patientService: PatientsService) {}
 

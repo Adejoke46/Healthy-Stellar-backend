@@ -16,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { DrugRecallService } from '../services/drug-recall.service';
 import { CreateDrugRecallDto } from './create-drug-recall.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -23,7 +24,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AdminGuard } from '../../auth/guards/admin.guard';
 
 @ApiTags('Drug Recalls')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, AdminGuard)
 @Controller('pharmacy/recalls')
 export class DrugRecallController {

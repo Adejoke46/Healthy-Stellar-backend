@@ -14,6 +14,7 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -22,7 +23,7 @@ import { RemittanceService } from '../services/remittance.service';
 import { IngestRemittanceDto } from '../dto/ingest-remittance.dto';
 
 @ApiTags('billing/remittances')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @Controller('billing/remittances')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN, UserRole.BILLING_STAFF)

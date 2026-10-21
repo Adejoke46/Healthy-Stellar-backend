@@ -2,13 +2,14 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from 
 import { HospitalRegistryService } from '../services/hospital-registry.service';
 import { CreateHospitalRegistryDto, UpdateHospitalRegistryDto } from '../dto/hospital-registry.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { API_BEARER_AUTH_SCHEME } from '../../common/constants/swagger.constants';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../auth/entities/user.entity';
 
 @ApiTags('hospital-registry')
-@ApiBearerAuth()
+@ApiBearerAuth(API_BEARER_AUTH_SCHEME)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('hospital-registry')
 export class HospitalRegistryController {
